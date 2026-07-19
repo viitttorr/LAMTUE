@@ -1,0 +1,85 @@
+import { exigirDiretoria } from "@/lib/auth";
+import { db, TEMAS } from "@/lib/db";
+import { salvarCaso, excluirCaso } from "@/app/actions/diretoria";
+
+const EXEMPLO = `? Qual a primeira conduta na avaliação primária?
+* Garantir a permeabilidade da via aérea com controle da coluna cervical | O "A" do ABCDE sempre vem primeiro.
+- Realizar exame neurológico completo | O exame neurológico detalhado pertence à avaliação secundária.
+- Solicitar tomografia de crânio | Exames de imagem só após estabilização inicial.
+
+? O paciente apresenta respiração ruidosa. E agora?
+* Aspirar a cavidade oral e considerar via aérea definitiva | Ruído sugere obstrução: desobstruir e proteger a via aérea.
+- Oferecer água ao paciente | Nunca ofereça líquidos a um paciente com rebaixamento.`;
+
+export default async function CasosAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
+  await exigirDiretoria();
+  const { ok, erro } = await searchParams;
+  const casos = db().prepare(
+    `SELECT c.*, (SELECT COUNT(*) FROM casos_resultados r WHERE r.caso_id = c.id) AS execucoes FROM casos c ORDER BY c.id DESC`
+  ).all() as { id: number; titulo: string; tema: string; contexto: string; etapas: string; visibilidade: string; execucoes: number }[];
+
+  return (
+    <>
+      <h1 className="page-title">Gestão de Casos Clínicos</h1>
+      <p className="page-sub">Casos públicos aparecem no site sem gabarito; ligantes têm a versão interativa completa.</p>
+      {ok && <div className="alert alert-green">Caso salvo com sucesso.</div>}
+      {erro && <div className="alert alert-red">{erro}</div>}
+
+      <div className="card mb-3">
+        <h3 style={{ fontSize: 16 }}>Novo caso</h3>
+        <form action={salvarCaso}>
+          <div className="grid3" style={{ gap: 12 }}>
+            <div><label className="label">Título *</label><input className="input" name="titulo" required /></div>
+            <div>
+              <label className="label">Tema *</label>
+              <select className="input" name="tema" required defaultValue="">
+                <option value="" disabled>Selecione</option>
+                {TEMAS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Visibilidade</label>
+              <select className="input" name="visibilidade" defaultValue="ligantes">
+                <option value="ligantes">Apenas ligantes</option>
+                <option value="publico">Pública (sem gabarito)</option>
+              </select>
+            </div>
+          </div>
+          <label className="label">Cenário (apresentação do caso) *</label>
+          <textarea className="input" name="contexto" rows={3} required placeholder="Homem, 34 anos, vítima de colisão moto × carro, trazido pelo SAMU…" />
+          <label className="label">Etapas de decisão *</label>
+          <textarea className="input" name="etapas" rows={10} required defaultValue={EXEMPLO} style={{ fontFamily: "monospace", fontSize: 13 }} />
+          <p className="small mt-1">
+            Linhas com <code>?</code> iniciam uma etapa; <code>*</code> marca a opção correta e <code>-</code> as incorretas.
+            Após <code>|</code>, o feedback exibido ao ligante.
+          </p>
+          <button className="btn btn-primary btn-sm mt-2" type="submit">Salvar caso</button>
+        </form>
+      </div>
+
+      <div className="table-wrap">
+        <table className="tbl">
+          <thead><tr><th>Título</th><th>Tema</th><th>Etapas</th><th>Visibilidade</th><th>Execuções</th><th></th></tr></thead>
+          <tbody>
+            {casos.length === 0 && <tr><td colSpan={6} className="muted">Nenhum caso cadastrado.</td></tr>}
+            {casos.map((c) => (
+              <tr key={c.id}>
+                <td><strong>{c.titulo}</strong></td>
+                <td className="muted">{c.tema}</td>
+                <td><span className="badge">{JSON.parse(c.etapas).length}</span></td>
+                <td>{c.visibilidade === "publico" ? <span className="badge badge-blue">Pública</span> : <span className="badge">Ligantes</span>}</td>
+                <td><span className="badge badge-green">{c.execucoes}</span></td>
+                <td>
+                  <form action={excluirCaso}>
+                    <input type="hidden" name="id" value={c.id} />
+                    <button className="btn btn-sm btn-danger" type="submit">Excluir</button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
