@@ -11,6 +11,7 @@ import Countdown from "@/components/Countdown";
 import TiltCard from "@/components/TiltCard";
 import ChapterNav from "@/components/ChapterNav";
 import Parallax from "@/components/Parallax";
+import ScrollStage from "@/components/ScrollStage";
 
 export const dynamic = "force-dynamic";
 
@@ -42,22 +43,28 @@ export default function Home() {
 
   return (
     <>
+      <ScrollStage />
       <ChapterNav chapters={capitulos} />
 
       {/* ── CAPÍTULO 01 · HERO ───────────────────────── */}
       <section id="inicio" className="chapter hero2">
-        <div className="hero2-grid" aria-hidden />
-        <div className="hero2-beam" aria-hidden />
-        <div className="hero2-beam vermelho" aria-hidden />
         <ParticleField variant="hero" />
         <HeartbeatPulse />
+        <div className="hero2-monitor" aria-hidden>
+          <span className="anel" />
+          <span className="anel a2"><span className="tique" /></span>
+          <span className="anel a3" />
+          <span className="nucleo"><Image src="/logo.png" alt="" width={120} height={120} /></span>
+        </div>
         <div className="hero2-side" aria-hidden>Trauma · Urgência · Emergência</div>
         <HeroParallax>
           <div className="hero2-content">
             <div className="eyebrow">Liga Acadêmica · URI Erechim · CAMED</div>
-            <h1 className="hero-title mt-2">
-              Medicina de <span className="accent">Trauma</span>,<br />
-              <span className="accent-blue">Urgência</span> e Emergência
+            <h1 className="hero-title hero-title-stack mt-2" aria-label="Medicina de Trauma, Urgência e Emergência">
+              <span className="l1" aria-hidden>Medicina de</span>
+              <span className="l2 accent" aria-hidden>Trauma,</span>
+              <span className="l3" aria-hidden><span className="accent-blue">Urgência</span> e</span>
+              <span className="l4" aria-hidden>Emergência</span>
             </h1>
             <p className="muted mt-2" style={{ maxWidth: 620, fontSize: 17.5 }}>
               A LAMTUE forma acadêmicos preparados para os primeiros minutos que decidem vidas —
