@@ -6,7 +6,7 @@ const VEIL_PATH =
   "M0,22 L60,22 L70,22 L78,10 L86,32 L94,22 L150,22 L158,18 L166,22 L230,22 L240,6 L252,38 L262,22 L300,22";
 
 /** Tempo mínimo com o véu visível, para a transição ser perceptível. */
-const MIN_VISIVEL = 600;
+const MIN_VISIVEL = 1000;
 
 /**
  * Véu curto de transição entre rotas, com a identidade do loader (ECG).
@@ -67,6 +67,7 @@ export default function PageTransition() {
 
   return (
     <div className={`route-veil${ativo ? " active" : ""}`} aria-hidden>
+      <span className="veil-txt">Carregando</span>
       <svg className="veil-ecg" viewBox="0 0 300 44" preserveAspectRatio="none">
         <path d={VEIL_PATH} />
       </svg>

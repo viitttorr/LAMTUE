@@ -10,6 +10,7 @@ type Capitulo = { id: string; label: string };
  */
 export default function ChapterNav({ chapters }: { chapters: Capitulo[] }) {
   const [ativo, setAtivo] = useState(chapters[0]?.id ?? "");
+  const [oculto, setOculto] = useState(false);
 
   useEffect(() => {
     let raf = 0;
@@ -22,6 +23,9 @@ export default function ChapterNav({ chapters }: { chapters: Capitulo[] }) {
           if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.42) atual = c.id;
         }
         setAtivo(atual);
+        // some quando o rodapé se aproxima, para não disputar espaço com ele
+        const rodape = document.querySelector("footer.site-footer");
+        setOculto(!!rodape && rodape.getBoundingClientRect().top < window.innerHeight * 0.85);
       });
     };
     onScroll();
@@ -35,7 +39,7 @@ export default function ChapterNav({ chapters }: { chapters: Capitulo[] }) {
   }, [chapters]);
 
   return (
-    <nav className="chapter-rail" aria-label="Capítulos da página inicial">
+    <nav className={`chapter-rail${oculto ? " oculto" : ""}`} aria-label="Capítulos da página inicial">
       {chapters.map((c, i) => (
         <a
           key={c.id}

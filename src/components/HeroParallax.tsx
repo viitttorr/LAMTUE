@@ -1,7 +1,11 @@
 "use client";
 import { useEffect, useRef } from "react";
 
-/** Conteúdo do hero: some suavemente e desliza para cima conforme a página rola. */
+/**
+ * Conteúdo do hero: some suavemente e desliza de leve conforme a página rola.
+ * Também apaga cedo o indicador "role para explorar" e o ECG do rodapé do
+ * hero, para o texto nunca se sobrepor a eles durante a saída.
+ */
 export default function HeroParallax({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -14,9 +18,13 @@ export default function HeroParallax({ children }: { children: React.ReactNode }
         const el = ref.current;
         if (!el) return;
         const y = window.scrollY;
-        const fade = Math.max(0, 1 - y / 520);
-        el.style.opacity = String(fade);
-        el.style.transform = `translate3d(0, ${Math.min(y * 0.3, 170)}px, 0)`;
+        el.style.opacity = String(Math.max(0, 1 - y / 360));
+        el.style.transform = `translate3d(0, ${Math.min(y * 0.12, 60)}px, 0)`;
+        const secao = el.parentElement;
+        const cue = secao?.querySelector<HTMLElement>(".scroll-cue");
+        if (cue) cue.style.opacity = String(Math.max(0, 0.85 - y / 160));
+        const ecg = secao?.querySelector<HTMLElement>(".hero2-ecg");
+        if (ecg) ecg.style.opacity = String(Math.max(0, 0.55 - y / 420));
       });
     };
     window.addEventListener("scroll", onScroll, { passive: true });

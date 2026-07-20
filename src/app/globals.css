@@ -720,3 +720,35 @@ body::before {
 @keyframes monitor-girar { to { transform: rotate(360deg); } }
 @media (max-width: 1279px) { .hero2-monitor { display: none; } }
 @media (prefers-reduced-motion: reduce) { .hero2-monitor .anel.a2 { animation: none; } }
+
+/* ═══ Iteração 3 — fluidez, cenas temáticas e refinamentos ═══ */
+
+/* Hero em camada própria: o fade por rolagem vira trabalho de compositor,
+   sem repintar os glows da tipografia a cada frame. */
+.hero-content { will-change: transform, opacity; }
+.scroll-cue { will-change: opacity; }
+
+/* Véu de transição: rótulo acima da linha */
+.veil-txt {
+  font: 600 11px var(--font-body); letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--text-2);
+}
+
+/* Trilho de capítulos some perto do rodapé */
+.chapter-rail { transition: opacity 0.35s ease; }
+.chapter-rail.oculto { opacity: 0; pointer-events: none; }
+
+/* Cenas temáticas do palco */
+.stage-dna { position: absolute; right: 5vw; top: 30vh; height: 130vh; width: auto; opacity: 0; }
+.stage-dna path { fill: none; stroke-width: 2.2; }
+.stage-dna .fita1 { stroke: rgba(226, 83, 111, 0.34); }
+.stage-dna .fita2 { stroke: rgba(56, 189, 248, 0.28); }
+.stage-dna line { stroke: rgba(148, 163, 184, 0.20); stroke-width: 1.4; }
+.stage-molecula { position: absolute; left: 3vw; top: 26vh; width: min(440px, 32vw); opacity: 0; }
+.stage-molecula polygon { fill: none; stroke: rgba(56, 189, 248, 0.20); stroke-width: 1.6; }
+.stage-molecula circle { fill: rgba(226, 83, 111, 0.38); }
+.stage-alvo { position: absolute; right: 9vw; bottom: 8vh; width: min(400px, 30vw); aspect-ratio: 1; opacity: 0; }
+.stage-alvo circle { fill: none; stroke: rgba(226, 83, 111, 0.22); stroke-width: 1.4; }
+.stage-alvo circle.miolo { fill: rgba(226, 83, 111, 0.25); stroke: none; }
+.stage-alvo line { stroke: rgba(148, 163, 184, 0.24); stroke-width: 1.2; }
+@media (max-width: 760px) { .stage-dna, .stage-molecula, .stage-alvo { display: none; } }
