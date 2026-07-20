@@ -9,6 +9,8 @@ import Reveal from "@/components/Reveal";
 import Counter from "@/components/Counter";
 import Countdown from "@/components/Countdown";
 import TiltCard from "@/components/TiltCard";
+import ChapterNav from "@/components/ChapterNav";
+import Parallax from "@/components/Parallax";
 
 export const dynamic = "force-dynamic";
 
@@ -27,38 +29,56 @@ export default function Home() {
   const aulas = (db().prepare("SELECT COUNT(*) AS n FROM aulas").get() as { n: number }).n;
   const acoes = (db().prepare("SELECT COUNT(*) AS n FROM extensao WHERE tipo='acao'").get() as { n: number }).n;
 
+  const capitulos = [
+    { id: "inicio", label: "Início" },
+    ...(seletivo.ativo ? [{ id: "seletivo-aberto", label: "Seletivo" }] : []),
+    { id: "sobre", label: "A Liga" },
+    { id: "numeros", label: "Em números" },
+    { id: "trilha", label: "Trilha" },
+    { id: "diretoria", label: "Diretoria" },
+    { id: "plantao", label: "Plantão" },
+  ];
+  const num = (id: string) => String(capitulos.findIndex((c) => c.id === id) + 1).padStart(2, "0");
+
   return (
     <>
-      {/* ── HERO ─────────────────────────────────────── */}
-      <section className="hero" style={{ minHeight: "92vh", display: "flex", alignItems: "center" }}>
+      <ChapterNav chapters={capitulos} />
+
+      {/* ── CAPÍTULO 01 · HERO ───────────────────────── */}
+      <section id="inicio" className="chapter hero2">
+        <div className="hero2-grid" aria-hidden />
+        <div className="hero2-beam" aria-hidden />
+        <div className="hero2-beam vermelho" aria-hidden />
         <ParticleField variant="hero" />
         <HeartbeatPulse />
+        <div className="hero2-side" aria-hidden>Trauma · Urgência · Emergência</div>
         <HeroParallax>
-          <div className="eyebrow">Liga Acadêmica · URI Erechim · CAMED</div>
-          <h1 className="hero-title mt-2">
-            Medicina de <span className="accent">Trauma</span>,<br />
-            <span className="accent-blue">Urgência</span> e Emergência
-          </h1>
-          <p className="muted mt-2" style={{ maxWidth: 620, fontSize: 17.5 }}>
-            A LAMTUE forma acadêmicos preparados para os primeiros minutos que decidem vidas —
-            com ensino baseado em protocolos, simulação realística, pesquisa e extensão.
-          </p>
-          <div className="flex mt-3" style={{ flexWrap: "wrap" }}>
-            <Link href="/seletivo" className="btn btn-primary">Processo Seletivo</Link>
-            <Link href="/#sobre" className="btn">Conhecer a Liga</Link>
-            <Link href="/login" className="btn btn-ghost">Área do Ligante →</Link>
+          <div className="hero2-content">
+            <div className="eyebrow">Liga Acadêmica · URI Erechim · CAMED</div>
+            <h1 className="hero-title mt-2">
+              Medicina de <span className="accent">Trauma</span>,<br />
+              <span className="accent-blue">Urgência</span> e Emergência
+            </h1>
+            <p className="muted mt-2" style={{ maxWidth: 620, fontSize: 17.5 }}>
+              A LAMTUE forma acadêmicos preparados para os primeiros minutos que decidem vidas —
+              com ensino baseado em protocolos, simulação realística, pesquisa e extensão.
+            </p>
+            <div className="flex mt-3" style={{ flexWrap: "wrap" }}>
+              <Link href="/seletivo" className="btn btn-primary">Processo Seletivo</Link>
+              <Link href="/#sobre" className="btn">Conhecer a Liga</Link>
+              <Link href="/login" className="btn btn-ghost">Área do Ligante →</Link>
+            </div>
           </div>
         </HeroParallax>
+        <div className="hero2-ecg" aria-hidden><ECGLine height={64} /></div>
         <div className="scroll-cue"><span>Role para explorar</span><span className="chevron" /></div>
       </section>
 
-      <ECGLine />
-
       {/* ── SELETIVO AO VIVO ─────────────────────────── */}
       {!!seletivo.ativo && (
-        <section className="container" style={{ marginTop: 40 }}>
+        <section id="seletivo-aberto" className="chapter container" style={{ marginTop: 40 }}>
           <Reveal>
-            <div className="card hoverable" style={{ borderColor: "rgba(226,83,111,0.35)" }}>
+            <div className="card hoverable live-band">
               <div className="flex-between">
                 <div className="flex">
                   <span className="pulse-dot red" />
@@ -76,64 +96,90 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── SOBRE ────────────────────────────────────── */}
-      <section id="sobre" className="container" style={{ paddingTop: 90 }}>
-        <Reveal>
-          <div className="eyebrow">Quem somos</div>
-          <h2 className="section-title">Precisão quando cada segundo importa</h2>
-          <p className="muted" style={{ maxWidth: 760 }}>
-            A LAMTUE é a Liga Acadêmica de Medicina de Trauma, Urgência e Emergência da Universidade
-            Regional Integrada do Alto Uruguai e das Missões, campus Erechim/RS, vinculada ao CAMED.
-            Nossa missão é aproximar o acadêmico de medicina da realidade do atendimento de urgência —
-            do suporte básico de vida ao manejo avançado do politraumatizado.
-          </p>
-        </Reveal>
-        <div className="grid3 mt-3">
-          {AREAS.map((a, i) => (
-            <Reveal key={a.t} delay={i * 120} variant={i === 0 ? "left" : i === 2 ? "right" : "up"}>
-              <TiltCard>
-                <div className="card hoverable" style={{ height: "100%" }}>
-                  <div style={{ fontSize: 26, color: "var(--red-bright)" }}>{a.i}</div>
-                  <h3 style={{ fontSize: 19, margin: "10px 0 8px" }}>{a.t}</h3>
-                  <p className="muted" style={{ fontSize: 14.5 }}>{a.d}</p>
+      {/* ── CAPÍTULO · SOBRE ─────────────────────────── */}
+      <section id="sobre" className="chapter container" style={{ paddingTop: 110 }}>
+        <Parallax speed={0.06} className="chapter-ghost" style={{ position: "absolute", top: 12, right: "max(2vw, 10px)" }}>
+          <span aria-hidden>{num("sobre")}</span>
+        </Parallax>
+        <div className="sobre-grid" style={{ position: "relative", zIndex: 1 }}>
+          <div className="sobre-sticky">
+            <Reveal variant="left">
+              <div className="chapter-head">
+                <span className="chapter-no">{num("sobre")}</span>
+                <div>
+                  <div className="eyebrow">Quem somos</div>
+                  <h2 className="section-title">Precisão quando cada segundo importa</h2>
                 </div>
-              </TiltCard>
+              </div>
+              <p className="muted mt-2" style={{ maxWidth: 760 }}>
+                A LAMTUE é a Liga Acadêmica de Medicina de Trauma, Urgência e Emergência da Universidade
+                Regional Integrada do Alto Uruguai e das Missões, campus Erechim/RS, vinculada ao CAMED.
+                Nossa missão é aproximar o acadêmico de medicina da realidade do atendimento de urgência —
+                do suporte básico de vida ao manejo avançado do politraumatizado.
+              </p>
             </Reveal>
-          ))}
+          </div>
+          <div className="pillars">
+            {AREAS.map((a, i) => (
+              <Reveal key={a.t} delay={i * 120} variant="right">
+                <div className="pillar">
+                  <div className="pillar-node" aria-hidden>{a.i}</div>
+                  <div>
+                    <h3>{a.t}</h3>
+                    <p>{a.d}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── NÚMEROS ──────────────────────────────────── */}
-      <section className="container" style={{ paddingTop: 80 }}>
-        <div className="grid3">
+      {/* ── CAPÍTULO · NÚMEROS ───────────────────────── */}
+      <section id="numeros" className="chapter container" style={{ paddingTop: 110 }}>
+        <Reveal>
+          <div className="chapter-head">
+            <span className="chapter-no">{num("numeros")}</span>
+            <div>
+              <div className="eyebrow">A liga em atividade</div>
+            </div>
+          </div>
+        </Reveal>
+        <div className="stats-band mt-2">
+          <span className="stats-word" aria-hidden>LAMTUE</span>
           {[
             { n: ligantes, l: "Ligantes ativos" },
             { n: aulas, l: "Aulas e capacitações" },
             { n: acoes, l: "Ações de extensão" },
           ].map((s, i) => (
-            <Reveal key={s.l} delay={i * 100} variant="scale">
-              <TiltCard>
-                <div className="card stat hoverable">
-                  <div className="stat-num" style={{ color: i % 2 ? "var(--blue)" : "var(--red-bright)" }}>
-                    <Counter to={s.n} />
-                  </div>
-                  <div className="stat-label">{s.l}</div>
-                </div>
-              </TiltCard>
+            <Reveal key={s.l} delay={i * 110} variant="up">
+              <div className={`stat2${i % 2 ? " azul" : ""}`}>
+                <div className="stat2-num"><Counter to={s.n} /></div>
+                <div className="stat2-line" aria-hidden />
+                <div className="stat-label">{s.l}</div>
+              </div>
             </Reveal>
           ))}
         </div>
       </section>
 
-      {/* ── TEMAS ────────────────────────────────────── */}
-      <section className="container" style={{ paddingTop: 90 }}>
+      {/* ── CAPÍTULO · TEMAS ─────────────────────────── */}
+      <section id="trilha" className="chapter container" style={{ paddingTop: 110 }}>
+        <Parallax speed={0.05} className="chapter-ghost esq" style={{ position: "absolute", top: 12, left: "max(2vw, 10px)", right: "auto" }}>
+          <span aria-hidden>{num("trilha")}</span>
+        </Parallax>
         <Reveal>
-          <div className="eyebrow">Trilha de conhecimento</div>
-          <h2 className="section-title">O que você aprende na liga</h2>
-          <p className="muted" style={{ maxWidth: 620 }}>
-            {TEMAS.length} frentes de estudo que sustentam a formação prática da LAMTUE — da via aérea
-            ao transporte do paciente crítico.
-          </p>
+          <div className="chapter-head" style={{ position: "relative", zIndex: 1 }}>
+            <span className="chapter-no">{num("trilha")}</span>
+            <div>
+              <div className="eyebrow">Trilha de conhecimento</div>
+              <h2 className="section-title">O que você aprende na liga</h2>
+              <p className="muted" style={{ maxWidth: 620 }}>
+                {TEMAS.length} frentes de estudo que sustentam a formação prática da LAMTUE — da via aérea
+                ao transporte do paciente crítico.
+              </p>
+            </div>
+          </div>
         </Reveal>
         <div className="temas-field mt-2">
           <ParticleField variant="field" palette="blue" density={0.6} className="temas-canvas" />
@@ -155,25 +201,23 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── DIRETORIA ────────────────────────────────── */}
-      <section id="diretoria" className="container" style={{ paddingTop: 90 }}>
+      {/* ── CAPÍTULO · DIRETORIA ─────────────────────── */}
+      <section id="diretoria" className="chapter container" style={{ paddingTop: 110 }}>
         <Reveal>
-          <div className="eyebrow">Gestão 2026–2027</div>
-          <h2 className="section-title">Diretoria</h2>
+          <div className="chapter-head">
+            <span className="chapter-no">{num("diretoria")}</span>
+            <div>
+              <div className="eyebrow">Gestão 2026–2027</div>
+              <h2 className="section-title">Diretoria</h2>
+            </div>
+          </div>
         </Reveal>
         <div className="diretoria-grid mt-2">
           {DIRETORIA.map((m, i) => (
             <Reveal key={m.nome} delay={i * 90} variant="scale">
               <TiltCard>
-                <div className="card hoverable" style={{ textAlign: "center", height: "100%" }}>
-                  <div
-                    style={{
-                      width: 72, height: 72, borderRadius: "50%", margin: "0 auto 14px",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      background: "linear-gradient(135deg, rgba(139,21,56,0.5), rgba(14,165,233,0.25))",
-                      border: "1px solid var(--border)", font: "700 24px var(--font-display)",
-                    }}
-                  >
+                <div className="dir-card">
+                  <div className="dir-avatar">
                     {m.nome.split(" ").map((p) => p[0]).slice(0, 2).join("")}
                   </div>
                   <div style={{ fontWeight: 700, fontFamily: "var(--font-display)" }}>{m.nome}</div>
@@ -185,10 +229,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CTA FINAL ────────────────────────────────── */}
-      <section className="container" style={{ paddingTop: 90 }}>
+      {/* ── CAPÍTULO · CTA FINAL ─────────────────────── */}
+      <section id="plantao" className="chapter container" style={{ paddingTop: 110 }}>
         <Reveal variant="scale">
-          <div className="card" style={{ textAlign: "center", padding: "54px 30px", position: "relative", overflow: "hidden" }}>
+          <div className="cta-band">
+            <div className="cta-ecg" aria-hidden><ECGLine height={50} color="rgba(226,83,111,0.55)" /></div>
             <Image src="/logo.png" alt="" width={64} height={64} className="logo-ring" style={{ borderRadius: "50%", margin: "0 auto 18px" }} />
             <h2 className="section-title">Pronto para o plantão?</h2>
             <p className="muted" style={{ maxWidth: 520, margin: "0 auto" }}>

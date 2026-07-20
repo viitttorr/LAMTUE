@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
 import Reveal from "@/components/Reveal";
+import PageHeader from "@/components/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -10,14 +11,12 @@ export default function CasosPublicosPage() {
 
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>
-      <Reveal>
-        <div className="eyebrow">Desafie-se</div>
-        <h1 className="section-title">Casos Clínicos</h1>
+      <PageHeader eyebrow="Desafie-se" titulo="Casos Clínicos">
         <p className="muted" style={{ maxWidth: 700 }}>
           Casos liberados pela diretoria para o público. O gabarito comentado e a versão interativa
           ficam disponíveis na área do ligante.
         </p>
-      </Reveal>
+      </PageHeader>
       <div className="grid2 mt-3">
         {casos.length === 0 && <p className="muted">Nenhum caso público publicado no momento.</p>}
         {casos.map((c, i) => (

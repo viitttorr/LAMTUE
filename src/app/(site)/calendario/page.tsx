@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { fmtData } from "@/lib/util";
 import Reveal from "@/components/Reveal";
+import PageHeader from "@/components/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -46,10 +47,7 @@ export default function CalendarioPage() {
 
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>
-      <Reveal>
-        <div className="eyebrow">Agenda do semestre</div>
-        <h1 className="section-title">Calendário de Atividades</h1>
-      </Reveal>
+      <PageHeader eyebrow="Agenda do semestre" titulo="Calendário de Atividades" />
       <Bloco titulo="Próximas atividades" itens={futuros} />
       <Bloco titulo="Atividades realizadas" itens={passados} />
     </div>

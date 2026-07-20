@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { fmtData } from "@/lib/util";
 import Reveal from "@/components/Reveal";
+import PageHeader from "@/components/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -11,14 +12,12 @@ export default function ExtensaoPage() {
 
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>
-      <Reveal>
-        <div className="eyebrow">Comunidade</div>
-        <h1 className="section-title">Ações de Extensão</h1>
+      <PageHeader eyebrow="Comunidade" titulo="Ações de Extensão">
         <p className="muted" style={{ maxWidth: 700 }}>
           Registro das ações da liga junto à comunidade e materiais de primeiros socorros em
           linguagem acessível a todos.
         </p>
-      </Reveal>
+      </PageHeader>
 
       <h2 style={{ fontSize: 20, margin: "34px 0 14px" }}>Eventos realizados</h2>
       <div className="grid2">

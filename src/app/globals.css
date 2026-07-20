@@ -322,3 +322,328 @@ footer.site-footer { border-top: 1px solid var(--border); margin-top: 90px; padd
 .mb-2 { margin-bottom: 16px; } .mb-3 { margin-bottom: 26px; }
 .page-title { font-size: 27px; margin-bottom: 4px; }
 .page-sub { color: var(--text-2); font-size: 14.5px; margin-bottom: 26px; }
+
+/* ═══════════════════════════════════════════════════
+   REDESIGN 2026 — variação imersiva
+   Camada visual adicional: loader ECG, transições de
+   rota, capítulos da home, profundidade 2.5D.
+   Toda cor deriva da paleta oficial já definida acima.
+   ═══════════════════════════════════════════════════ */
+
+:root {
+  --ease-out: cubic-bezier(0.16, 0.8, 0.24, 1);
+  --nav-h: 68px;
+}
+
+html.intro-lock, html.drawer-lock { overflow: hidden; }
+/* A gaveta móvel fica fora da tela via transform; o clip impede que a caixa
+   transformada gere rolagem horizontal (clip não cria scroll container,
+   então o menu sticky segue funcionando). */
+html, body { overflow-x: clip; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ── Loader inicial com ECG ────────────────────── */
+.intro-loader {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(14, 43, 82, 0.35), transparent 60%),
+    radial-gradient(700px 420px at 50% 110%, rgba(139, 21, 56, 0.22), transparent 60%),
+    var(--bg);
+  transition: opacity 0.65s ease, visibility 0.65s;
+}
+.intro-loader.saida { opacity: 0; visibility: hidden; pointer-events: none; }
+.intro-logo {
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--border), var(--glow-red);
+  animation: intro-breathe 2.6s ease-in-out infinite;
+}
+.intro-loader.finale .intro-logo { animation: intro-logo-beat 0.5s ease; }
+@keyframes intro-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+@keyframes intro-logo-beat { 0% { transform: scale(1); } 35% { transform: scale(1.12); } 100% { transform: scale(1); } }
+.intro-ecg { width: min(560px, 82vw); height: 64px; overflow: visible; }
+.intro-ecg-base { fill: none; stroke: rgba(148, 163, 184, 0.14); stroke-width: 2; }
+.intro-ecg-draw {
+  fill: none; stroke: var(--red-bright); stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 7px rgba(226, 83, 111, 0.65));
+}
+.intro-loader.finale .intro-ecg-draw { animation: intro-ecg-pulse 0.55s ease; }
+@keyframes intro-ecg-pulse {
+  0% { filter: drop-shadow(0 0 7px rgba(226, 83, 111, 0.65)); }
+  40% { filter: drop-shadow(0 0 22px rgba(226, 83, 111, 1)); stroke-width: 3.2; }
+  100% { filter: drop-shadow(0 0 7px rgba(226, 83, 111, 0.65)); }
+}
+.intro-pct {
+  font: 700 clamp(34px, 6vw, 46px) var(--font-display);
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1;
+}
+.intro-bar { width: min(320px, 68vw); height: 2px; border-radius: 99px; background: rgba(148, 163, 184, 0.14); overflow: hidden; }
+.intro-bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--red-deep), var(--red-bright)); }
+.intro-status { font: 600 11px var(--font-body); letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-3); }
+@media (prefers-reduced-motion: reduce) {
+  .intro-logo, .intro-loader.finale .intro-logo, .intro-loader.finale .intro-ecg-draw { animation: none; }
+  .intro-ecg-draw { filter: none; }
+  .intro-loader { transition-duration: 0.25s; }
+}
+
+/* ── Véu de transição entre rotas ──────────────── */
+.route-veil {
+  position: fixed; inset: 0; z-index: 180;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background:
+    radial-gradient(700px 380px at 50% 0%, rgba(14, 43, 82, 0.3), transparent 60%),
+    rgba(5, 7, 13, 0.97);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.28s ease, visibility 0.28s;
+}
+.route-veil.active { opacity: 1; visibility: visible; transition-duration: 0.16s; }
+.route-veil .veil-ecg { width: min(300px, 60vw); height: 44px; }
+.route-veil .veil-ecg path {
+  fill: none; stroke: var(--red-bright); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 700; stroke-dashoffset: 700;
+  filter: drop-shadow(0 0 6px rgba(226, 83, 111, 0.6));
+  animation: veil-draw 1.1s linear infinite;
+}
+@keyframes veil-draw { 0% { stroke-dashoffset: 700; } 62% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -700; } }
+.route-veil .veil-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red-bright); animation: pulse 1s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .route-veil .veil-ecg path { animation: none; stroke-dashoffset: 0; }
+  .route-veil .veil-dot { animation: none; }
+}
+
+/* ── Menu institucional fixo (estados) ─────────── */
+.nav {
+  border-bottom: 1px solid transparent;
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+.nav.scrolled { background: rgba(5, 7, 13, 0.92); border-bottom-color: var(--border); }
+.nav-inner { min-height: var(--nav-h); transition: min-height 0.3s ease; }
+.nav.scrolled .nav-inner { min-height: 56px; }
+.nav-link { position: relative; padding-bottom: 2px; }
+.nav-link::after {
+  content: ""; position: absolute; left: 0; right: 100%; bottom: -3px; height: 2px;
+  background: linear-gradient(90deg, var(--red-bright), rgba(226, 83, 111, 0.15));
+  transition: right 0.28s var(--ease-out);
+}
+.nav-link:hover::after, .nav-link.active::after { right: 0; }
+.nav-link.active { color: var(--text); }
+
+/* hambúrguer + gaveta móvel */
+.nav-burger {
+  display: none; margin-left: auto; flex-direction: column; justify-content: center; gap: 5px;
+  width: 44px; height: 44px; padding: 10px; border-radius: 10px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.nav-burger span { display: block; height: 2px; border-radius: 2px; background: var(--text); transition: transform 0.28s var(--ease-out), opacity 0.2s; }
+.nav-burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.nav-burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.nav-scrim {
+  position: fixed; inset: 0; z-index: 94; background: rgba(2, 4, 8, 0.6);
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.nav-scrim.open { opacity: 1; pointer-events: auto; }
+.nav-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 95;
+  width: min(320px, 86vw); padding: 90px 26px 30px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: rgba(7, 11, 20, 0.97); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid var(--border);
+  transform: translateX(102%); visibility: hidden;
+  transition: transform 0.34s var(--ease-out), visibility 0.34s;
+}
+.nav-drawer.open { transform: none; visibility: visible; }
+.nav-drawer .nav-link {
+  font: 600 16px var(--font-display); color: var(--text-2);
+  padding: 13px 10px; border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+.nav-drawer .nav-link.active { color: var(--red-bright); }
+.nav-drawer .nav-link::after { content: none; }
+.nav-drawer .btn { margin-top: 18px; }
+@media (max-width: 919px) {
+  .nav-links { display: none; }
+  .nav-burger { display: inline-flex; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-drawer { transition-duration: 0.01s; }
+}
+
+/* ── Trilho de capítulos da home ───────────────── */
+.chapter-rail {
+  position: fixed; right: 22px; top: 50%; transform: translateY(-50%); z-index: 60;
+  display: grid; gap: 4px;
+}
+.chapter-rail a {
+  display: flex; align-items: center; gap: 10px; padding: 6px 2px;
+  color: var(--text-3); font: 600 10.5px var(--font-display); letter-spacing: 0.14em;
+  transition: color 0.25s;
+}
+.chapter-rail a::before {
+  content: ""; width: 18px; height: 2px; border-radius: 2px; flex-shrink: 0;
+  background: rgba(148, 163, 184, 0.28);
+  transition: width 0.3s var(--ease-out), background 0.3s;
+}
+.chapter-rail a:hover { color: var(--text-2); }
+.chapter-rail a.active { color: var(--text); }
+.chapter-rail a.active::before { width: 32px; background: linear-gradient(90deg, var(--red-bright), rgba(226, 83, 111, 0.35)); }
+.chapter-rail .lbl { opacity: 0; transform: translateX(-4px); transition: opacity 0.25s, transform 0.25s var(--ease-out); }
+.chapter-rail a:hover .lbl, .chapter-rail a.active .lbl { opacity: 1; transform: none; }
+@media (max-width: 1099px) { .chapter-rail { display: none; } }
+
+/* ── Capítulos da home ─────────────────────────── */
+.chapter { position: relative; }
+.chapter-head { display: flex; align-items: flex-start; gap: 18px; }
+.chapter-no {
+  flex-shrink: 0; margin-top: 4px;
+  font: 700 13px var(--font-display); letter-spacing: 0.28em; color: var(--red-bright);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.chapter-no::after { content: ""; width: 1px; height: 34px; background: linear-gradient(180deg, var(--red-bright), transparent); }
+.chapter-ghost {
+  position: absolute; top: 12px; right: max(2vw, 10px); z-index: 0;
+  font: 700 clamp(110px, 17vw, 220px) var(--font-display); line-height: 1;
+  color: transparent; -webkit-text-stroke: 1px rgba(148, 163, 184, 0.09);
+  user-select: none; pointer-events: none;
+}
+.chapter-ghost.esq { right: auto; left: max(2vw, 10px); }
+@media (max-width: 760px) { .chapter-ghost { font-size: 96px; opacity: 0.65; } }
+
+/* ── Hero 2026 ─────────────────────────────────── */
+.hero2 { min-height: 100svh; display: flex; align-items: center; position: relative; overflow: hidden; }
+.hero2-grid {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(75% 70% at 50% 45%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(75% 70% at 50% 45%, #000 30%, transparent 100%);
+}
+.hero2-beam {
+  position: absolute; z-index: 0; pointer-events: none;
+  top: -30%; right: -12%; width: 66%; height: 130%;
+  background: linear-gradient(215deg, rgba(56, 189, 248, 0.13), rgba(14, 165, 233, 0.04) 45%, transparent 70%);
+  transform: rotate(6deg);
+  filter: blur(2px);
+  animation: beam-drift 11s ease-in-out infinite alternate;
+}
+.hero2-beam.vermelho {
+  top: auto; right: auto; bottom: -35%; left: -14%; width: 58%;
+  background: linear-gradient(35deg, rgba(139, 21, 56, 0.2), rgba(160, 29, 67, 0.05) 50%, transparent 75%);
+  animation-duration: 14s; animation-delay: -6s;
+}
+@keyframes beam-drift { from { transform: rotate(6deg) translate3d(0, -14px, 0); } to { transform: rotate(6deg) translate3d(0, 22px, 0); } }
+.hero2 .heartbeat-pulse .ring { top: 50%; left: 78%; }
+.hero2-side {
+  position: absolute; left: 26px; bottom: 110px; z-index: 1;
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  font: 600 10.5px var(--font-body); letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-3);
+  display: flex; align-items: center; gap: 12px;
+}
+.hero2-side::after { content: ""; width: 1px; height: 54px; background: linear-gradient(0deg, var(--red-bright), transparent); }
+.hero2-ecg { position: absolute; left: 0; right: 0; bottom: 0; z-index: 0; opacity: 0.55; pointer-events: none; }
+.hero2 .hero-title { font-size: clamp(40px, 7vw, 82px); }
+.hero2-content { max-width: 760px; }
+@media (max-width: 1279px) { .hero2-side { display: none; } }
+@media (prefers-reduced-motion: reduce) { .hero2-beam { animation: none; } }
+
+/* ── Faixa "seletivo ao vivo" ──────────────────── */
+.live-band {
+  border-color: rgba(226, 83, 111, 0.35);
+  background:
+    radial-gradient(420px 160px at 8% 50%, rgba(139, 21, 56, 0.25), transparent 70%),
+    var(--surface);
+}
+
+/* ── Capítulo "Quem somos": pilares em fluxo ───── */
+.sobre-grid { display: grid; grid-template-columns: 5fr 6fr; gap: clamp(30px, 5vw, 72px); align-items: start; }
+.sobre-sticky { position: sticky; top: 118px; }
+.pillars { position: relative; display: grid; gap: 10px; }
+.pillars::before {
+  content: ""; position: absolute; left: 21px; top: 16px; bottom: 16px; width: 1px;
+  background: linear-gradient(180deg, rgba(226, 83, 111, 0.55), rgba(56, 189, 248, 0.4), transparent);
+}
+.pillar { position: relative; display: grid; grid-template-columns: 44px 1fr; gap: 18px; padding: 16px 0; }
+.pillar-node {
+  width: 44px; height: 44px; border-radius: 50%; z-index: 1;
+  display: flex; align-items: center; justify-content: center; font-size: 17px;
+  color: var(--red-bright); background: var(--bg-2);
+  border: 1px solid rgba(226, 83, 111, 0.4);
+  box-shadow: 0 0 16px rgba(226, 83, 111, 0.12);
+  transition: box-shadow 0.3s, transform 0.3s var(--ease-out);
+}
+.pillar:nth-child(2) .pillar-node { color: var(--blue); border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 0 16px rgba(56, 189, 248, 0.1); }
+.pillar:hover .pillar-node { transform: scale(1.1); box-shadow: 0 0 26px rgba(226, 83, 111, 0.3); }
+.pillar:nth-child(2):hover .pillar-node { box-shadow: 0 0 26px rgba(56, 189, 248, 0.28); }
+.pillar h3 { font-size: 19px; margin-bottom: 6px; }
+.pillar p { color: var(--text-2); font-size: 14.5px; max-width: 520px; }
+@media (max-width: 960px) { .sobre-grid { grid-template-columns: 1fr; } .sobre-sticky { position: static; } }
+
+/* ── Capítulo "Números" ────────────────────────── */
+.stats-band {
+  position: relative; display: flex; flex-wrap: wrap; align-items: flex-end;
+  gap: clamp(34px, 7vw, 110px); padding: 14px 0 4px;
+}
+.stat2 { min-width: 150px; }
+.stat2-num { font: 700 clamp(56px, 7vw, 86px) var(--font-display); line-height: 1; letter-spacing: -0.03em; color: var(--red-bright); }
+.stat2.azul .stat2-num { color: var(--blue); }
+.stat2-line { height: 3px; width: 54px; border-radius: 3px; margin: 14px 0 10px; background: linear-gradient(90deg, var(--red-bright), transparent); }
+.stat2.azul .stat2-line { background: linear-gradient(90deg, var(--blue), transparent); }
+.stats-word {
+  position: absolute; right: 0; bottom: -8px; z-index: 0;
+  font: 700 clamp(70px, 11vw, 150px) var(--font-display); line-height: 1; letter-spacing: 0.04em;
+  color: transparent; -webkit-text-stroke: 1px rgba(148, 163, 184, 0.07);
+  user-select: none; pointer-events: none;
+}
+@media (max-width: 760px) { .stats-word { display: none; } }
+
+/* ── Capítulo "Trilha" (temas) ─────────────────── */
+.tema-card { border-radius: 11px; background: rgba(10, 16, 30, 0.55); }
+.tema-card:hover { border-color: rgba(56, 189, 248, 0.4); box-shadow: var(--glow-blue); }
+
+/* ── Capítulo "Diretoria" ──────────────────────── */
+.dir-card {
+  position: relative; overflow: hidden; text-align: center; height: 100%;
+  padding: 30px 22px 26px; border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(9, 14, 26, 0.4));
+  border: 1px solid var(--border);
+  transition: transform 0.28s var(--ease-out), border-color 0.28s, box-shadow 0.28s;
+}
+.dir-card::before {
+  content: ""; position: absolute; top: 0; left: 18%; right: 18%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--red-bright), transparent); opacity: 0.55;
+}
+.dir-card:hover { transform: translateY(-5px); border-color: var(--border-hover); box-shadow: var(--glow-red); }
+.dir-avatar {
+  width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(139, 21, 56, 0.5), rgba(14, 165, 233, 0.25));
+  border: 1px solid var(--border); font: 700 24px var(--font-display);
+}
+@media (min-width: 761px) { .diretoria-grid > *:nth-child(even) { margin-top: 26px; } }
+
+/* ── Faixa final (CTA) ─────────────────────────── */
+.cta-band {
+  position: relative; overflow: hidden; text-align: center;
+  padding: clamp(54px, 9vw, 92px) 28px;
+  border: 1px solid var(--border); border-radius: 20px;
+  background:
+    radial-gradient(620px 300px at 50% -15%, rgba(139, 21, 56, 0.34), transparent 70%),
+    var(--surface);
+}
+.cta-band .cta-ecg { position: absolute; left: 0; right: 0; bottom: 4px; opacity: 0.3; pointer-events: none; }
+.cta-band > * { position: relative; z-index: 1; }
+.cta-band .cta-ecg { z-index: 0; }
+
+/* ── Cabeçalho padrão das páginas internas ─────── */
+.page-head { position: relative; padding-bottom: 6px; margin-bottom: 10px; }
+.page-head::after {
+  content: ""; position: absolute; left: 0; bottom: 0; width: 120px; height: 2px;
+  background: linear-gradient(90deg, var(--red-bright), transparent);
+}
+.page-head .section-title { margin-bottom: 6px; }
+
+/* ── Parallax utilitário ───────────────────────── */
+.plx-inner { will-change: transform; }
+@media (prefers-reduced-motion: reduce) { .plx-inner { transform: none !important; } }

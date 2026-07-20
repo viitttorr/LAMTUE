@@ -5,6 +5,7 @@ import { fmtData, fmtValor } from "@/lib/util";
 import Countdown from "@/components/Countdown";
 import Counter from "@/components/Counter";
 import Reveal from "@/components/Reveal";
+import PageHeader from "@/components/PageHeader";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -58,10 +59,7 @@ export default async function SeletivoPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>
-      <Reveal>
-        <div className="eyebrow">Ingresso na liga</div>
-        <h1 className="section-title">Processo Seletivo</h1>
-      </Reveal>
+      <PageHeader eyebrow="Ingresso na liga" titulo="Processo Seletivo" />
 
       {!sel.ativo ? (
         <div className="alert alert-blue" style={{ maxWidth: 640 }}>

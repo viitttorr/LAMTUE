@@ -1,6 +1,7 @@
 import { getConfig } from "@/lib/db";
 import { enviarEmail } from "@/lib/mailer";
 import Reveal from "@/components/Reveal";
+import PageHeader from "@/components/PageHeader";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -20,10 +21,7 @@ export default async function ContatoPage({ searchParams }: { searchParams: Prom
   const { ok, erro } = await searchParams;
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>
-      <Reveal>
-        <div className="eyebrow">Fale com a liga</div>
-        <h1 className="section-title">Contato</h1>
-      </Reveal>
+      <PageHeader eyebrow="Fale com a liga" titulo="Contato" />
       <div className="grid2 mt-2" style={{ alignItems: "start" }}>
         <Reveal>
           <div className="card">

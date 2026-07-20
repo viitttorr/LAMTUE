@@ -1,37 +1,12 @@
 import Link from "next/link";
-import Image from "next/image";
 import { getSessao } from "@/lib/auth";
 import ECGLine from "./ECGLine";
-import ScrollHeartbeat from "./ScrollHeartbeat";
+import NavClient from "./NavClient";
 
 export async function Navbar() {
   const sessao = await getSessao();
   const area = sessao ? (sessao.role === "diretoria" ? "/diretoria" : "/ligante") : "/login";
-  return (
-    <header className="nav">
-      <div className="container nav-inner">
-        <Link href="/" className="flex" style={{ gap: 12 }}>
-          <Image src="/logo.png" alt="LAMTUE" width={40} height={40} className="logo-ring" style={{ borderRadius: "50%" }} />
-          <div>
-            <div style={{ font: "700 17px var(--font-display)", letterSpacing: "0.12em" }}>LAMTUE</div>
-            <div style={{ fontSize: 10, color: "var(--text-3)", letterSpacing: "0.05em" }}>URI ERECHIM · CAMED</div>
-          </div>
-        </Link>
-        <nav className="nav-links">
-          <Link className="nav-link" href="/#sobre">A Liga</Link>
-          <Link className="nav-link" href="/seletivo">Processo Seletivo</Link>
-          <Link className="nav-link" href="/calendario">Calendário</Link>
-          <Link className="nav-link" href="/extensao">Extensão</Link>
-          <Link className="nav-link" href="/casos">Casos Clínicos</Link>
-          <Link className="nav-link" href="/contato">Contato</Link>
-          <Link className="btn btn-primary btn-sm" href={area}>
-            {sessao ? "Minha área" : "Entrar"}
-          </Link>
-        </nav>
-      </div>
-      <ScrollHeartbeat />
-    </header>
-  );
+  return <NavClient area={area} entrarLabel={sessao ? "Minha área" : "Entrar"} />;
 }
 
 export function Footer() {
