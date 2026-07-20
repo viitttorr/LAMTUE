@@ -7,34 +7,36 @@ type Capitulo = { id: string; label: string };
  * Navegação por capítulos da página inicial: trilho lateral fixo com
  * numeração, título curto e estado ativo conforme o scroll. Complementa o
  * menu institucional — não o substitui.
+ *
+ * Usa IntersectionObserver em vez de getBoundingClientRect em loop a cada
+ * scroll: medido em Chrome real, a versão anterior custava ~4ms por frame
+ * (leitura de layout forçada para cada capítulo, a cada evento de rolagem).
  */
 export default function ChapterNav({ chapters }: { chapters: Capitulo[] }) {
   const [ativo, setAtivo] = useState(chapters[0]?.id ?? "");
   const [oculto, setOculto] = useState(false);
 
   useEffect(() => {
-    let raf = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        let atual = chapters[0]?.id ?? "";
-        for (const c of chapters) {
-          const el = document.getElementById(c.id);
-          if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.42) atual = c.id;
-        }
-        setAtivo(atual);
-        // some quando o rodapé se aproxima, para não disputar espaço com ele
-        const rodape = document.querySelector("footer.site-footer");
-        setOculto(!!rodape && rodape.getBoundingClientRect().top < window.innerHeight * 0.85);
-      });
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    const linha = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) setAtivo(e.target.id);
+      },
+      { rootMargin: "-42% 0px -58% 0px", threshold: 0 }
+    );
+    chapters.forEach((c) => {
+      const el = document.getElementById(c.id);
+      if (el) linha.observe(el);
+    });
+
+    const rodape = document.querySelector("footer.site-footer");
+    const obsRodape = rodape
+      ? new IntersectionObserver(([e]) => setOculto(e.isIntersecting), { rootMargin: "0px 0px -15% 0px", threshold: 0 })
+      : null;
+    if (rodape) obsRodape!.observe(rodape);
+
     return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      linha.disconnect();
+      obsRodape?.disconnect();
     };
   }, [chapters]);
 

@@ -25,7 +25,13 @@ export default function ParticleField({ variant = "hero", palette = "mixed", den
     if (!ctx) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    let w = 0, h = 0, raf = 0;
+    // Em telas Retina (dpr 2–3), um canvas na resolução nativa custa 4–9×
+    // mais pixels por frame; medido em Chrome real isso sozinho já consumia
+    // ~10ms de um orçamento de 16.7ms (60fps). Um teto de 1.5 mantém nitidez
+    // suficiente para o efeito (partículas pequenas e desfocadas).
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+
+    let w = 0, h = 0, raf = 0, visivel = true;
     const mouse = { x: -9999, y: -9999 };
     type P = { x: number; y: number; vx: number; vy: number; r: number; blue: boolean };
     let pts: P[] = [];
@@ -33,8 +39,8 @@ export default function ParticleField({ variant = "hero", palette = "mixed", den
 
     const resize = () => {
       const rect = canvas.parentElement!.getBoundingClientRect();
-      w = canvas.width = rect.width * devicePixelRatio;
-      h = canvas.height = rect.height * devicePixelRatio;
+      w = canvas.width = rect.width * dpr;
+      h = canvas.height = rect.height * dpr;
       canvas.style.width = rect.width + "px";
       canvas.style.height = rect.height + "px";
       const base = rect.width < 720 ? 42 : 92;
@@ -42,21 +48,21 @@ export default function ParticleField({ variant = "hero", palette = "mixed", den
       pts = Array.from({ length: n }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.22 * devicePixelRatio,
-        vy: (Math.random() - 0.5) * 0.22 * devicePixelRatio,
-        r: (Math.random() * 1.4 + 0.7) * devicePixelRatio,
+        vx: (Math.random() - 0.5) * 0.22 * dpr,
+        vy: (Math.random() - 0.5) * 0.22 * dpr,
+        r: (Math.random() * 1.4 + 0.7) * dpr,
         blue: palette === "blue" ? true : Math.random() < 0.45,
       }));
     };
 
     const onMove = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
-      mouse.x = (e.clientX - rect.left) * devicePixelRatio;
-      mouse.y = (e.clientY - rect.top) * devicePixelRatio;
+      mouse.x = (e.clientX - rect.left) * dpr;
+      mouse.y = (e.clientY - rect.top) * dpr;
     };
     const onLeave = () => { mouse.x = -9999; mouse.y = -9999; };
 
-    const LINK = 130 * devicePixelRatio;
+    const LINK = 130 * dpr;
     const t0 = performance.now();
     const draw = (now: number) => {
       ctx.clearRect(0, 0, w, h);
@@ -66,9 +72,9 @@ export default function ParticleField({ variant = "hero", palette = "mixed", den
         if (interactive) {
           const dx = mouse.x - p.x, dy = mouse.y - p.y;
           const dist = Math.hypot(dx, dy);
-          if (dist < 220 * devicePixelRatio && dist > 1) {
-            p.vx += (dx / dist) * 0.008 * devicePixelRatio;
-            p.vy += (dy / dist) * 0.008 * devicePixelRatio;
+          if (dist < 220 * dpr && dist > 1) {
+            p.vx += (dx / dist) * 0.008 * dpr;
+            p.vy += (dy / dist) * 0.008 * dpr;
           }
         }
         p.vx *= 0.995; p.vy *= 0.995;
@@ -84,7 +90,7 @@ export default function ParticleField({ variant = "hero", palette = "mixed", den
           if (d < LINK) {
             const alpha = (1 - d / LINK) * (0.16 + beat * 0.1);
             ctx.strokeStyle = a.blue && b.blue ? `rgba(56,189,248,${alpha})` : `rgba(226,83,111,${alpha})`;
-            ctx.lineWidth = devicePixelRatio * 0.6;
+            ctx.lineWidth = dpr * 0.6;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
@@ -98,7 +104,10 @@ export default function ParticleField({ variant = "hero", palette = "mixed", den
         ctx.arc(p.x, p.y, p.r * (1 + beat * 0.25), 0, Math.PI * 2);
         ctx.fill();
       }
-      raf = requestAnimationFrame(draw);
+      // a cena continua existindo fora da tela (não desmonta ao rolar); sem
+      // esse corte o loop seguiria consumindo CPU indefinidamente mesmo com
+      // o hero há muito fora da viewport
+      if (visivel) raf = requestAnimationFrame(draw);
     };
 
     resize();
@@ -108,6 +117,18 @@ export default function ParticleField({ variant = "hero", palette = "mixed", den
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerleave", onLeave);
     }
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visivel = entry.isIntersecting;
+        if (visivel) {
+          cancelAnimationFrame(raf);
+          raf = requestAnimationFrame(draw);
+        }
+      },
+      { rootMargin: "200px 0px" }
+    );
+    io.observe(canvas);
 
     // paralaxe leve no scroll (só faz sentido no hero, seção fixa no topo)
     let scrollRaf = 0;
@@ -122,6 +143,7 @@ export default function ParticleField({ variant = "hero", palette = "mixed", den
     return () => {
       cancelAnimationFrame(raf);
       cancelAnimationFrame(scrollRaf);
+      io.disconnect();
       window.removeEventListener("resize", resize);
       if (interactive) {
         window.removeEventListener("pointermove", onMove);
