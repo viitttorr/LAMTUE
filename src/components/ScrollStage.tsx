@@ -77,6 +77,21 @@ export default function ScrollStage() {
       path.style.strokeDashoffset = `${len}`;
     }
 
+    // Cada cena temática só fica visível numa fração do percurso — na maior
+    // parte da rolagem sua opacidade-alvo é 0. Evitar escrever estilo quando
+    // já estava e continua invisível corta a maioria dos frames pela metade.
+    const ultimo: Record<string, number> = { rings: -1, dna: -1, molecula: -1, alvo: -1 };
+    const aplicarCena = (nome: string, el: HTMLElement | null, opacidade: number, transformar: () => string) => {
+      if (!el) return;
+      if (opacidade < 0.004 && ultimo[nome] < 0.004) {
+        ultimo[nome] = opacidade;
+        return;
+      }
+      ultimo[nome] = opacidade;
+      el.style.opacity = opacidade.toFixed(3);
+      el.style.transform = transformar();
+    };
+
     let raf = 0;
     let ultimoOffset = -1;
     const cena = () => {
@@ -86,24 +101,18 @@ export default function ScrollStage() {
       if (beamA) beamA.style.transform = `rotate(${(8 + p * 26).toFixed(2)}deg) translate3d(0, ${(p * 260).toFixed(1)}px, 0)`;
       if (beamB) beamB.style.transform = `rotate(${(-6 - p * 20).toFixed(2)}deg) translate3d(0, ${(-p * 220).toFixed(1)}px, 0)`;
       if (glowFrio) glowFrio.style.opacity = `${(0.25 + Math.sin(p * Math.PI) * 0.75).toFixed(3)}`;
-      // anéis: presentes na abertura, saem de cena no primeiro terço
-      if (rings) {
-        rings.style.opacity = `${Math.max(0, 1 - p / 0.3).toFixed(3)}`;
-        rings.style.transform = `translate3d(${(-p * 30).toFixed(2)}vw, ${(140 - p * 380).toFixed(1)}px, 0) scale(${(1 + p * 0.4).toFixed(3)})`;
-      }
-      // cenas temáticas que se alternam com a descida
-      if (dna) {
-        dna.style.opacity = (janela(p, 0.16, 0.52) * 0.9).toFixed(3);
-        dna.style.transform = `translate3d(0, ${(-120 - p * 320).toFixed(1)}px, 0) rotate(${(p * 10).toFixed(2)}deg)`;
-      }
-      if (molecula) {
-        molecula.style.opacity = (janela(p, 0.44, 0.78) * 0.9).toFixed(3);
-        molecula.style.transform = `translate3d(0, ${(120 - p * 280).toFixed(1)}px, 0) rotate(${(-6 + p * 14).toFixed(2)}deg)`;
-      }
-      if (alvo) {
-        alvo.style.opacity = (Math.max(0, Math.min(1, (p - 0.74) / 0.08)) * 0.95).toFixed(3);
-        alvo.style.transform = `scale(${(0.85 + p * 0.25).toFixed(3)}) rotate(${(p * 24).toFixed(2)}deg)`;
-      }
+      aplicarCena("rings", rings, Math.max(0, 1 - p / 0.3), () =>
+        `translate3d(${(-p * 30).toFixed(2)}vw, ${(140 - p * 380).toFixed(1)}px, 0) scale(${(1 + p * 0.4).toFixed(3)})`
+      );
+      aplicarCena("dna", dna, janela(p, 0.16, 0.52) * 0.9, () =>
+        `translate3d(0, ${(-120 - p * 320).toFixed(1)}px, 0) rotate(${(p * 10).toFixed(2)}deg)`
+      );
+      aplicarCena("molecula", molecula, janela(p, 0.44, 0.78) * 0.9, () =>
+        `translate3d(0, ${(120 - p * 280).toFixed(1)}px, 0) rotate(${(-6 + p * 14).toFixed(2)}deg)`
+      );
+      aplicarCena("alvo", alvo, Math.max(0, Math.min(1, (p - 0.74) / 0.08)) * 0.95, () =>
+        `scale(${(0.85 + p * 0.25).toFixed(3)}) rotate(${(p * 24).toFixed(2)}deg)`
+      );
       // ECG gigante: repintar só quando o avanço for perceptível
       if (path) {
         const off = len * (1 - p);
