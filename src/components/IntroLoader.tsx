@@ -1,13 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { SPINE_READY_EVENT } from "./SpineBackground";
 
 /**
  * Tela de carregamento inicial em tela cheia, com ECG e percentual 0–100%.
  * Regras: duração mínima de 3s, percentual sincronizado ao carregamento real
- * (fontes + evento load), trava perto de 95% enquanto aguarda e só libera o
- * site quando as duas condições terminam. Um flag em escopo de módulo garante
- * que ela só aparece em carregamento completo — navegações SPA não a reexibem.
+ * (fontes + evento load + modelo 3D da coluna), trava perto de 95% enquanto
+ * aguarda e só libera o site quando todas as condições terminam. Um flag em
+ * escopo de módulo garante que ela só aparece em carregamento completo —
+ * navegações SPA não a reexibem.
  */
 let jaExibido = false;
 
@@ -35,6 +37,12 @@ export default function IntroLoader() {
     const fontesProntas = () => !document.fonts || document.fonts.status === "loaded";
     document.fonts?.ready.catch(() => undefined);
 
+    // O modelo 3D da coluna carrega via fetch próprio (fora do document.readyState),
+    // então sem isso o loader podia sumir antes da coluna terminar de aparecer.
+    let spineProntx = (window as typeof window & { __lamtueSpineReady?: boolean }).__lamtueSpineReady === true;
+    const onSpinePronto = () => { spineProntx = true; };
+    window.addEventListener(SPINE_READY_EVENT, onSpinePronto);
+
     const path = pathRef.current;
     const len = path ? path.getTotalLength() : 0;
     if (path) {
@@ -52,12 +60,12 @@ export default function IntroLoader() {
       ultimo = agora;
       const carregado = carregouTudo();
       const fontesOk = fontesProntas();
-      // progresso "real": rampa própria + fontes prontas + página carregada (máx. 95)
-      const rampa = Math.min(38, t / 45);
-      const real = Math.min(95, rampa + (fontesOk ? 22 : 0) + (carregado ? 35 : 0));
+      // progresso "real": rampa própria + fontes prontas + página carregada + coluna 3D (máx. 95)
+      const rampa = Math.min(30, t / 55);
+      const real = Math.min(95, rampa + (fontesOk ? 17 : 0) + (carregado ? 27 : 0) + (spineProntx ? 21 : 0));
       // o tempo mínimo dita o ritmo: nem o real adianta o relógio dos 3s
       const ritmo = (Math.min(t, MIN) / MIN) * 95;
-      const pronto = (t >= MIN && carregado && fontesOk) || t >= TETO;
+      const pronto = (t >= MIN && carregado && fontesOk && spineProntx) || t >= TETO;
       const alvo = pronto ? 100 : Math.min(ritmo, real);
       // suavização baseada em tempo: independe da taxa de frames
       atual += (alvo - atual) * (1 - Math.exp(-dt / (pronto ? 110 : 260)));
@@ -98,6 +106,7 @@ export default function IntroLoader() {
     return () => {
       cancelAnimationFrame(raf);
       window.clearTimeout(failsafe);
+      window.removeEventListener(SPINE_READY_EVENT, onSpinePronto);
       document.documentElement.classList.remove("intro-lock");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

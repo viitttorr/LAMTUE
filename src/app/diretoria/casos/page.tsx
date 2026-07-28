@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { exigirDiretoria } from "@/lib/auth";
 import { db, TEMAS } from "@/lib/db";
 import { salvarCaso, excluirCaso } from "@/app/actions/diretoria";
@@ -21,7 +22,10 @@ export default async function CasosAdminPage({ searchParams }: { searchParams: P
   return (
     <>
       <h1 className="page-title">Gestão de Casos Clínicos</h1>
-      <p className="page-sub">Casos públicos aparecem no site sem gabarito; ligantes têm a versão interativa completa.</p>
+      <p className="page-sub">
+        Os casos ficam na área logada — ligantes e diretoria acessam a versão interativa com gabarito.
+        No menu do site público, o lugar deles passou a ser da Galeria.
+      </p>
       {ok && <div className="alert alert-green">Caso salvo com sucesso.</div>}
       {erro && <div className="alert alert-red">{erro}</div>}
 
@@ -70,10 +74,13 @@ export default async function CasosAdminPage({ searchParams }: { searchParams: P
                 <td>{c.visibilidade === "publico" ? <span className="badge badge-blue">Pública</span> : <span className="badge">Ligantes</span>}</td>
                 <td><span className="badge badge-green">{c.execucoes}</span></td>
                 <td>
-                  <form action={excluirCaso}>
-                    <input type="hidden" name="id" value={c.id} />
-                    <button className="btn btn-sm btn-danger" type="submit">Excluir</button>
-                  </form>
+                  <div className="flex" style={{ gap: 8 }}>
+                    <Link className="btn btn-sm" href={`/ligante/casos/${c.id}`}>Abrir</Link>
+                    <form action={excluirCaso}>
+                      <input type="hidden" name="id" value={c.id} />
+                      <button className="btn btn-sm btn-danger" type="submit">Excluir</button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             ))}

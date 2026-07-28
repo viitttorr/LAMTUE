@@ -74,3 +74,24 @@ export async function exigirDiretoria(): Promise<Sessao> {
 export function ehTesoureiro(s: Sessao): boolean {
   return s.role === "diretoria" && !!s.cargo && s.cargo.toLowerCase().includes("tesoureiro");
 }
+
+/**
+ * Galeria: publica a Diretoria de Comunicação (marketing) e, como respaldo,
+ * a Presidência.
+ */
+export function podeGerenciarGaleria(s: Sessao): boolean {
+  if (s.role !== "diretoria" || !s.cargo) return false;
+  const c = s.cargo.toLowerCase();
+  // "vice-presidente" contém "presidente": a exclusão é proposital, para o
+  // acesso não ser concedido por coincidência de texto. Para liberar a
+  // vice-presidência, basta remover a checagem de "vice".
+  const ehPresidencia = c.includes("presidente") && !c.includes("vice");
+  return c.includes("comunica") || ehPresidencia;
+}
+
+/** Porta de entrada das telas de gestão da galeria. */
+export async function exigirGaleria(): Promise<Sessao> {
+  const s = await exigirDiretoria();
+  if (!podeGerenciarGaleria(s)) redirect("/diretoria");
+  return s;
+}

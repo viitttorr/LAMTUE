@@ -10,7 +10,7 @@ const LINKS = [
   { href: "/seletivo", label: "Processo Seletivo" },
   { href: "/calendario", label: "Calendário" },
   { href: "/extensao", label: "Extensão" },
-  { href: "/casos", label: "Casos Clínicos" },
+  { href: "/galeria", label: "Galeria" },
   { href: "/contato", label: "Contato" },
 ];
 

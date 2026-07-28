@@ -1,8 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { db, DIRETORIA, TEMAS } from "@/lib/db";
-import ParticleField from "@/components/ParticleField";
-import HeroParallax from "@/components/HeroParallax";
 import HeartbeatPulse from "@/components/HeartbeatPulse";
 import ECGLine from "@/components/ECGLine";
 import Reveal from "@/components/Reveal";
@@ -10,8 +8,6 @@ import Counter from "@/components/Counter";
 import Countdown from "@/components/Countdown";
 import TiltCard from "@/components/TiltCard";
 import ChapterNav from "@/components/ChapterNav";
-import Parallax from "@/components/Parallax";
-import ScrollStage from "@/components/ScrollStage";
 
 export const dynamic = "force-dynamic";
 
@@ -43,12 +39,10 @@ export default function Home() {
 
   return (
     <>
-      <ScrollStage />
       <ChapterNav chapters={capitulos} />
 
       {/* ── CAPÍTULO 01 · HERO ───────────────────────── */}
       <section id="inicio" className="chapter hero2">
-        <ParticleField variant="hero" />
         <HeartbeatPulse />
         <div className="hero2-monitor" aria-hidden>
           <span className="anel" />
@@ -57,7 +51,7 @@ export default function Home() {
           <span className="nucleo"><Image src="/logo.png" alt="" width={120} height={120} /></span>
         </div>
         <div className="hero2-side" aria-hidden>Trauma · Urgência · Emergência</div>
-        <HeroParallax>
+        <div className="container hero-content" style={{ padding: "90px 24px" }}>
           <div className="hero2-content">
             <div className="eyebrow">Liga Acadêmica · URI Erechim · CAMED</div>
             <h1 className="hero-title hero-title-stack mt-2" aria-label="Medicina de Trauma, Urgência e Emergência">
@@ -66,17 +60,17 @@ export default function Home() {
               <span className="l3" aria-hidden><span className="accent-blue">Urgência</span> e</span>
               <span className="l4" aria-hidden>Emergência</span>
             </h1>
-            <p className="muted mt-2" style={{ maxWidth: 620, fontSize: 17.5 }}>
+            <p className="mt-2" style={{ maxWidth: 620, fontSize: 17.5, color: "var(--text)" }}>
               A LAMTUE forma acadêmicos preparados para os primeiros minutos que decidem vidas —
               com ensino baseado em protocolos, simulação realística, pesquisa e extensão.
             </p>
             <div className="flex mt-3" style={{ flexWrap: "wrap" }}>
               <Link href="/seletivo" className="btn btn-primary">Processo Seletivo</Link>
               <Link href="/#sobre" className="btn">Conhecer a Liga</Link>
-              <Link href="/login" className="btn btn-ghost">Área do Ligante →</Link>
+              <Link href="/login" className="btn btn-blue">Área do Ligante →</Link>
             </div>
           </div>
-        </HeroParallax>
+        </div>
         <div className="hero2-ecg" aria-hidden><ECGLine height={64} /></div>
         <div className="scroll-cue"><span>Role para explorar</span><span className="chevron" /></div>
       </section>
@@ -105,9 +99,9 @@ export default function Home() {
 
       {/* ── CAPÍTULO · SOBRE ─────────────────────────── */}
       <section id="sobre" className="chapter container" style={{ paddingTop: 110 }}>
-        <Parallax speed={0.06} className="chapter-ghost" style={{ position: "absolute", top: 12, right: "max(2vw, 10px)" }}>
+        <div className="chapter-ghost" style={{ position: "absolute", top: 12, right: "max(2vw, 10px)" }}>
           <span aria-hidden>{num("sobre")}</span>
-        </Parallax>
+        </div>
         <div className="sobre-grid" style={{ position: "relative", zIndex: 1 }}>
           <div className="sobre-sticky">
             <Reveal variant="left">
@@ -172,9 +166,9 @@ export default function Home() {
 
       {/* ── CAPÍTULO · TEMAS ─────────────────────────── */}
       <section id="trilha" className="chapter container" style={{ paddingTop: 110 }}>
-        <Parallax speed={0.05} className="chapter-ghost esq" style={{ position: "absolute", top: 12, left: "max(2vw, 10px)", right: "auto" }}>
+        <div className="chapter-ghost esq" style={{ position: "absolute", top: 12, left: "max(2vw, 10px)", right: "auto" }}>
           <span aria-hidden>{num("trilha")}</span>
-        </Parallax>
+        </div>
         <Reveal>
           <div className="chapter-head" style={{ position: "relative", zIndex: 1 }}>
             <span className="chapter-no">{num("trilha")}</span>
@@ -189,7 +183,6 @@ export default function Home() {
           </div>
         </Reveal>
         <div className="temas-field mt-2">
-          <ParticleField variant="field" palette="blue" density={0.6} className="temas-canvas" />
           <div className="temas-grid">
             {TEMAS.map((t, i) => (
               <Reveal key={t} delay={(i % 6) * 70} variant="scale">

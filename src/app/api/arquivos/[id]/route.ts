@@ -14,10 +14,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const ehComprovante = db().prepare("SELECT id FROM inscricoes WHERE comprovante_id = ?").get(arquivoId);
   const material = db().prepare("SELECT visibilidade FROM materiais WHERE arquivo_id = ?").get(arquivoId) as { visibilidade: string } | undefined;
   const ehExtensao = db().prepare("SELECT id FROM extensao WHERE arquivo_id = ?").get(arquivoId);
+  const foto = db().prepare(
+    "SELECT a.visibilidade FROM galeria_fotos f JOIN galeria_albuns a ON a.id = f.album_id WHERE f.arquivo_id = ?"
+  ).get(arquivoId) as { visibilidade: string } | undefined;
 
   if (ehComprovante && sessao?.role !== "diretoria") return new Response("Acesso negado", { status: 403 });
   if (material && material.visibilidade !== "publico" && !sessao) return new Response("Acesso negado", { status: 403 });
-  if (!ehComprovante && !material && !ehExtensao && !sessao) return new Response("Acesso negado", { status: 403 });
+  if (foto && foto.visibilidade !== "publico" && !sessao) return new Response("Acesso negado", { status: 403 });
+  if (!ehComprovante && !material && !ehExtensao && !foto && !sessao) return new Response("Acesso negado", { status: 403 });
 
   const f = lerArquivo(arquivoId);
   if (!f) return new Response("Arquivo não encontrado", { status: 404 });

@@ -47,9 +47,11 @@ export default function CalendarioPage() {
 
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>
-      <PageHeader eyebrow="Agenda do semestre" titulo="Calendário de Atividades" />
-      <Bloco titulo="Próximas atividades" itens={futuros} />
-      <Bloco titulo="Atividades realizadas" itens={passados} />
+      <div className="page-panel">
+        <PageHeader eyebrow="Agenda do semestre" titulo="Calendário de Atividades" />
+        <Bloco titulo="Próximas atividades" itens={futuros} />
+        <Bloco titulo="Atividades realizadas" itens={passados} />
+      </div>
     </div>
   );
 }

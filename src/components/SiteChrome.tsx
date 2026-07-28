@@ -26,7 +26,7 @@ export function Footer() {
           <div style={{ display: "grid", gap: 5 }}>
             <Link href="/seletivo">Processo Seletivo</Link>
             <Link href="/calendario">Calendário</Link>
-            <Link href="/casos">Casos Clínicos</Link>
+            <Link href="/galeria">Galeria</Link>
             <Link href="/contato">Contato</Link>
           </div>
         </div>

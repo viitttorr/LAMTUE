@@ -59,6 +59,7 @@ export default async function SeletivoPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>
+      <div className="page-panel">
       <PageHeader eyebrow="Ingresso na liga" titulo="Processo Seletivo" />
 
       {!sel.ativo ? (
@@ -143,6 +144,7 @@ export default async function SeletivoPage({ searchParams }: { searchParams: Pro
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

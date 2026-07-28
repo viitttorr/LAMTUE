@@ -203,7 +203,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .scroll-cue .chevron { animation: none; } }
 
-/* ── Monitor de rolagem (ECG que "lê" a página) ── */
+/* ── Monitor de rolagem (ECG que "lê" a página) — vive na barra fixa ── */
 .scroll-heartbeat { position: absolute; left: 0; right: 0; bottom: -1px; height: 22px; overflow: hidden; pointer-events: none; }
 .scroll-heartbeat-track { position: absolute; inset: 0; background: rgba(226, 83, 111, 0.04); }
 .scroll-heartbeat svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 5px rgba(226, 83, 111, 0.55)); }
@@ -211,7 +211,6 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 
 /* ── Seção "Temas" — cartões flutuantes ────────── */
 .temas-field { position: relative; padding: 34px 0 10px; }
-.temas-canvas { position: absolute; inset: -40px 0; z-index: 0; opacity: 0.7; }
 .temas-grid { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
 .tema-card {
   padding: 16px 18px; display: flex; align-items: center; gap: 12px;
@@ -305,7 +304,6 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 
 /* hero */
 .hero { position: relative; overflow: hidden; }
-.hero-canvas { position: absolute; inset: 0; z-index: 0; }
 .hero-content { position: relative; z-index: 1; }
 .hero-title { font-size: clamp(38px, 6.5vw, 68px); letter-spacing: -0.03em; line-height: 1.05; }
 .hero-title .accent { color: var(--red-bright); text-shadow: 0 0 40px rgba(226, 83, 111, 0.5); }
@@ -557,7 +555,11 @@ html, body { overflow-x: clip; }
 }
 
 /* ── Capítulo "Quem somos": pilares em fluxo ───── */
-.sobre-grid { display: grid; grid-template-columns: 5fr 6fr; gap: clamp(30px, 5vw, 72px); align-items: start; }
+.sobre-grid {
+  display: grid; grid-template-columns: 5fr 6fr; gap: clamp(30px, 5vw, 72px); align-items: start;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  padding: clamp(28px, 4vw, 48px);
+}
 .sobre-sticky { position: sticky; top: 118px; }
 .pillars { position: relative; display: grid; gap: 10px; }
 .pillars::before {
@@ -637,6 +639,56 @@ html, body { overflow-x: clip; }
 .cta-band > * { position: relative; z-index: 1; }
 .cta-band .cta-ecg { z-index: 0; }
 
+/* ── Painel de página — mesmo fundo translúcido da faixa final (seção 06),
+   usado nas páginas internas para dar legibilidade sobre o fundo fixo ── */
+.page-panel {
+  position: relative;
+  background:
+    radial-gradient(620px 300px at 50% -15%, rgba(139, 21, 56, 0.34), transparent 70%),
+    var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: clamp(28px, 4vw, 48px);
+  margin-bottom: 40px;
+}
+
+/* ── Galeria — grade de álbuns e fotos ─────────── */
+.album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; }
+.album-card { display: block; padding: 0; overflow: hidden; }
+.album-capa { position: relative; aspect-ratio: 4 / 3; background: var(--bg-3); }
+.album-capa-vazia { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(139,21,56,0.12)); }
+.album-badge { position: absolute; top: 10px; right: 10px; }
+.foto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.foto-item { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: none; padding: 0; cursor: pointer; }
+.foto-item-admin { cursor: default; }
+.foto-capa-tag { position: absolute; top: 8px; left: 8px; z-index: 1; }
+.foto-excluir { position: absolute; inset: auto 0 0 0; padding: 6px; display: flex; justify-content: center; background: linear-gradient(0deg, rgba(0,0,0,0.65), transparent); }
+.foto-excluir .btn { width: 100%; }
+
+/* ── Lightbox da galeria ────────────────────────── */
+.lightbox {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(2, 4, 8, 0.92);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px;
+}
+.lb-img-wrap { position: relative; width: min(1100px, 90vw); height: min(78vh, 900px); }
+.lb-fechar {
+  position: absolute; top: 18px; right: 22px; z-index: 1;
+  background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border); color: var(--text);
+  width: 40px; height: 40px; border-radius: 50%; font-size: 22px; line-height: 1; cursor: pointer;
+}
+.lb-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 1;
+  background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border); color: var(--text);
+  width: 48px; height: 48px; border-radius: 50%; font-size: 26px; line-height: 1; cursor: pointer;
+}
+.lb-prev { left: 18px; }
+.lb-next { right: 18px; }
+@media (max-width: 760px) { .lb-nav { width: 40px; height: 40px; font-size: 20px; } .lb-prev { left: 6px; } .lb-next { right: 6px; } }
+.lb-legenda { margin-top: 16px; display: flex; gap: 14px; align-items: center; color: var(--text-2); font-size: 14px; }
+.lb-contador { color: var(--text-3); }
+
 /* ── Cabeçalho padrão das páginas internas ─────── */
 .page-head { position: relative; padding-bottom: 6px; margin-bottom: 10px; }
 .page-head::after {
@@ -644,10 +696,6 @@ html, body { overflow-x: clip; }
   background: linear-gradient(90deg, var(--red-bright), transparent);
 }
 .page-head .section-title { margin-bottom: 6px; }
-
-/* ── Parallax utilitário ───────────────────────── */
-.plx-inner { will-change: transform; }
-@media (prefers-reduced-motion: reduce) { .plx-inner { transform: none !important; } }
 
 /* ═══ Iteração 2 — desempenho, palco de fundo e hero recomposto ═══ */
 
@@ -662,34 +710,6 @@ body::before {
 }
 .scroll-heartbeat svg { filter: none; }
 .tema-card { backdrop-filter: none; -webkit-backdrop-filter: none; }
-
-/* ── Palco de fundo integrado à rolagem (somente na home) ── */
-.scroll-stage { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.scroll-stage > * { will-change: transform, opacity; }
-.stage-glow { position: absolute; inset: -20%; }
-.stage-glow.quente { background: radial-gradient(60% 50% at 18% 28%, rgba(139, 21, 56, 0.17), transparent 70%); }
-.stage-glow.frio { background: radial-gradient(55% 45% at 82% 72%, rgba(14, 80, 140, 0.15), transparent 70%); opacity: 0.3; }
-.stage-grid {
-  position: absolute; inset: -220px 0;
-  background-image:
-    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-  background-size: 72px 72px;
-  -webkit-mask-image: radial-gradient(80% 70% at 50% 45%, #000 25%, transparent 100%);
-  mask-image: radial-gradient(80% 70% at 50% 45%, #000 25%, transparent 100%);
-}
-.stage-beam { position: absolute; width: 70vw; height: 150vh; top: -25vh; filter: blur(2px); }
-.stage-beam.azul { right: -20vw; background: linear-gradient(210deg, rgba(56, 189, 248, 0.12), rgba(14, 165, 233, 0.03) 45%, transparent 65%); }
-.stage-beam.rubro { left: -24vw; background: linear-gradient(30deg, rgba(160, 29, 67, 0.18), rgba(139, 21, 56, 0.05) 50%, transparent 72%); }
-.stage-rings { position: absolute; right: 6vw; top: 16vh; width: min(560px, 42vw); aspect-ratio: 1; }
-.stage-rings span { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(226, 83, 111, 0.15); }
-.stage-rings span:nth-child(2) { inset: 12%; border-color: rgba(56, 189, 248, 0.13); }
-.stage-rings span:nth-child(3) { inset: 26%; border-color: rgba(226, 83, 111, 0.10); }
-.stage-rings span:nth-child(4) { inset: 40%; border-color: rgba(148, 163, 184, 0.10); border-style: dashed; }
-.stage-ecg { position: absolute; left: 0; right: 0; top: 44%; width: 100%; height: 160px; opacity: 0.11; }
-.stage-ecg path { fill: none; stroke: var(--red-bright); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-@media (max-width: 760px) { .stage-beam, .stage-rings, .stage-ecg { display: none; } }
-@media (prefers-reduced-motion: reduce) { .scroll-stage { display: none; } }
 
 /* ── Hero: tipografia escalonada ── */
 .hero-title-stack { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.02; }
@@ -723,11 +743,6 @@ body::before {
 
 /* ═══ Iteração 3 — fluidez, cenas temáticas e refinamentos ═══ */
 
-/* Hero em camada própria: o fade por rolagem vira trabalho de compositor,
-   sem repintar os glows da tipografia a cada frame. */
-.hero-content { will-change: transform, opacity; }
-.scroll-cue { will-change: opacity; }
-
 /* Véu de transição: rótulo acima da linha */
 .veil-txt {
   font: 600 11px var(--font-body); letter-spacing: 0.32em; text-transform: uppercase;
@@ -738,17 +753,62 @@ body::before {
 .chapter-rail { transition: opacity 0.35s ease; }
 .chapter-rail.oculto { opacity: 0; pointer-events: none; }
 
-/* Cenas temáticas do palco */
-.stage-dna { position: absolute; right: 5vw; top: 30vh; height: 130vh; width: auto; opacity: 0; }
-.stage-dna path { fill: none; stroke-width: 2.2; }
-.stage-dna .fita1 { stroke: rgba(226, 83, 111, 0.34); }
-.stage-dna .fita2 { stroke: rgba(56, 189, 248, 0.28); }
-.stage-dna line { stroke: rgba(148, 163, 184, 0.20); stroke-width: 1.4; }
-.stage-molecula { position: absolute; left: 3vw; top: 26vh; width: min(440px, 32vw); opacity: 0; }
-.stage-molecula polygon { fill: none; stroke: rgba(56, 189, 248, 0.20); stroke-width: 1.6; }
-.stage-molecula circle { fill: rgba(226, 83, 111, 0.38); }
-.stage-alvo { position: absolute; right: 9vw; bottom: 8vh; width: min(400px, 30vw); aspect-ratio: 1; opacity: 0; }
-.stage-alvo circle { fill: none; stroke: rgba(226, 83, 111, 0.22); stroke-width: 1.4; }
-.stage-alvo circle.miolo { fill: rgba(226, 83, 111, 0.25); stroke: none; }
-.stage-alvo line { stroke: rgba(148, 163, 184, 0.24); stroke-width: 1.2; }
-@media (max-width: 760px) { .stage-dna, .stage-molecula, .stage-alvo { display: none; } }
+/* ── Atmosfera de fundo — grade, brilhos e varredura (só CSS, sem JS) ── */
+.atmosfera { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+.atmosfera-grade {
+  position: absolute; inset: -220px 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(85% 70% at 50% 28%, #000 20%, transparent 85%);
+  mask-image: radial-gradient(85% 70% at 50% 28%, #000 20%, transparent 85%);
+  animation: atmosfera-grade-desliza 70s linear infinite;
+}
+@keyframes atmosfera-grade-desliza {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, -72px, 0); }
+}
+.atmosfera-brilho { position: absolute; width: 60vw; height: 60vw; max-width: 720px; max-height: 720px; border-radius: 50%; filter: blur(80px); }
+.atmosfera-brilho.brilho-azul {
+  top: -12%; right: -8%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.16), transparent 70%);
+  animation: atmosfera-flutuar 24s ease-in-out infinite alternate;
+}
+.atmosfera-brilho.brilho-vermelho {
+  bottom: -16%; left: -10%;
+  background: radial-gradient(circle, rgba(160, 29, 67, 0.14), transparent 70%);
+  animation: atmosfera-flutuar 28s ease-in-out infinite alternate-reverse;
+}
+@keyframes atmosfera-flutuar {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-4%, 3%, 0) scale(1.08); }
+}
+.atmosfera-scan {
+  position: absolute; left: 0; right: 0; height: 160px;
+  background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.05) 45%, rgba(56, 189, 248, 0.08) 50%, rgba(56, 189, 248, 0.05) 55%, transparent);
+  opacity: 0.6;
+  animation: atmosfera-scan-move 13s linear infinite;
+}
+@keyframes atmosfera-scan-move {
+  0% { transform: translateY(-200px); }
+  100% { transform: translateY(110vh); }
+}
+@media (max-width: 760px) { .atmosfera-scan { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .atmosfera-grade, .atmosfera-brilho, .atmosfera-scan { animation: none; }
+}
+
+/* ── Coluna vertebral 3D em WebGL — fundo fixo do site público ── */
+.spine-bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: block;
+  opacity: 0.55;
+}
+@media (max-width: 640px) { .spine-bg-canvas { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .spine-bg-canvas { display: none; } }

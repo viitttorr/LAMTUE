@@ -1,7 +1,7 @@
 "use server";
 import bcrypt from "bcryptjs";
 import { db, getConfig, setConfig } from "@/lib/db";
-import { exigirDiretoria, ehTesoureiro } from "@/lib/auth";
+import { exigirDiretoria, ehTesoureiro, exigirGaleria } from "@/lib/auth";
 import { registrarAcao } from "@/lib/audit";
 import { salvarArquivo } from "@/lib/arquivos";
 import { notificar, notificarLigantes } from "@/lib/notify";
@@ -467,4 +467,68 @@ export async function reenviarConfirmacao(formData: FormData) {
     "inscricao_seletivo"
   );
   revalidatePath("/diretoria/seletivo");
+}
+
+/* ── Galeria ───────────────────────────────────── */
+export async function criarAlbum(formData: FormData) {
+  const s = await exigirGaleria();
+  const titulo = String(formData.get("titulo") || "").trim();
+  const descricao = String(formData.get("descricao") || "").trim() || null;
+  const data = String(formData.get("data") || "") || null;
+  const visibilidade = String(formData.get("visibilidade") || "publico") === "ligantes" ? "ligantes" : "publico";
+  if (!titulo) redirect("/diretoria/galeria?erro=" + encodeURIComponent("Informe o título do álbum."));
+  const r = db().prepare(
+    "INSERT INTO galeria_albuns (titulo, descricao, data, visibilidade) VALUES (?, ?, ?, ?)"
+  ).run(titulo, descricao, data, visibilidade);
+  registrarAcao(s.id, "album_criado", titulo);
+  revalidatePath("/diretoria/galeria");
+  redirect(`/diretoria/galeria/${r.lastInsertRowid}`);
+}
+
+export async function excluirAlbum(formData: FormData) {
+  const s = await exigirGaleria();
+  const id = Number(formData.get("id"));
+  db().prepare("DELETE FROM galeria_albuns WHERE id = ?").run(id);
+  registrarAcao(s.id, "album_excluido", `#${id}`);
+  revalidatePath("/diretoria/galeria");
+  revalidatePath("/galeria");
+  redirect("/diretoria/galeria");
+}
+
+export async function adicionarFotos(formData: FormData) {
+  const s = await exigirGaleria();
+  const albumId = Number(formData.get("album_id"));
+  const legenda = String(formData.get("legenda") || "").trim() || null;
+  const arquivos = formData.getAll("fotos") as File[];
+  const falhas: string[] = [];
+  let salvas = 0;
+  for (const f of arquivos) {
+    if (!f || f.size === 0) continue;
+    if (!f.type.startsWith("image/")) { falhas.push(`${f.name} (tipo não suportado)`); continue; }
+    try {
+      const arquivoId = await salvarArquivo(f);
+      if (!arquivoId) continue;
+      db().prepare("INSERT INTO galeria_fotos (album_id, arquivo_id, legenda) VALUES (?, ?, ?)").run(albumId, arquivoId, legenda);
+      salvas++;
+    } catch (e) {
+      falhas.push(`${f.name} (${e instanceof Error ? e.message : "falha no upload"})`);
+    }
+  }
+  registrarAcao(s.id, "fotos_adicionadas", `album #${albumId}: ${salvas} foto(s)`);
+  revalidatePath(`/diretoria/galeria/${albumId}`);
+  revalidatePath("/galeria");
+  revalidatePath(`/galeria/${albumId}`);
+  if (falhas.length) redirect(`/diretoria/galeria/${albumId}?erro=` + encodeURIComponent(`Algumas fotos não foram salvas: ${falhas.join(", ")}`));
+  redirect(`/diretoria/galeria/${albumId}`);
+}
+
+export async function excluirFoto(formData: FormData) {
+  const s = await exigirGaleria();
+  const id = Number(formData.get("id"));
+  const albumId = Number(formData.get("album_id"));
+  db().prepare("DELETE FROM galeria_fotos WHERE id = ?").run(id);
+  registrarAcao(s.id, "foto_excluida", `#${id}`);
+  revalidatePath(`/diretoria/galeria/${albumId}`);
+  revalidatePath("/galeria");
+  revalidatePath(`/galeria/${albumId}`);
 }

@@ -228,6 +228,22 @@ function migrate(d: Database.Database) {
     chave TEXT PRIMARY KEY,
     valor TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS galeria_albuns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    titulo TEXT NOT NULL,
+    descricao TEXT,
+    data TEXT,
+    visibilidade TEXT NOT NULL DEFAULT 'publico' CHECK (visibilidade IN ('publico','ligantes')),
+    criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+  CREATE TABLE IF NOT EXISTS galeria_fotos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    album_id INTEGER NOT NULL REFERENCES galeria_albuns(id) ON DELETE CASCADE,
+    arquivo_id INTEGER NOT NULL REFERENCES arquivos(id),
+    legenda TEXT,
+    criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_galeria_fotos_album ON galeria_fotos(album_id);
   `);
 
   // Seed: diretoria 2026–2027 (senha inicial "lamtue2026", troca obrigatória)
