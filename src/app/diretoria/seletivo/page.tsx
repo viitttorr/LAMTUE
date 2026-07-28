@@ -1,24 +1,17 @@
 import { exigirDiretoria } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { salvarSeletivo, alterarStatusInscricao, enviarResultados, matricularAprovados, reenviarConfirmacao } from "@/app/actions/diretoria";
+import { db, STATUS_LABEL } from "@/lib/db";
+import { salvarSeletivo, alterarStatusInscricao, enviarResultados, matricularAprovados, reenviarConfirmacao, criarContaCandidato } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
 
-const STATUS_LABEL: Record<string, { label: string; badge: string }> = {
-  pendente: { label: "Pendente", badge: "badge-amber" },
-  aprovado: { label: "Aprovado", badge: "badge-green" },
-  reprovado: { label: "Reprovado", badge: "badge-red" },
-  espera: { label: "Lista de espera", badge: "badge-blue" },
-};
-
-export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
+export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   await exigirDiretoria();
-  const { ok } = await searchParams;
+  const { ok, erro } = await searchParams;
   const sel = db().prepare("SELECT * FROM seletivo WHERE id = 1").get() as {
     ativo: number; vagas: number; prazo: string | null; taxa_centavos: number; edital: string | null; cronograma: string | null;
   };
   const inscritos = db().prepare("SELECT * FROM inscricoes ORDER BY criado_em DESC").all() as {
     id: number; nome: string; matricula: string; semestre: string; email: string; telefone: string;
-    comprovante_id: number | null; status: string; criado_em: string;
+    comprovante_id: number | null; status: string; criado_em: string; user_id: number | null;
   }[];
   const porStatus = (st: string) => inscritos.filter((i) => i.status === st).length;
   const cronogramaTexto = sel.cronograma
@@ -30,6 +23,7 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
       <h1 className="page-title">Processo Seletivo</h1>
       <p className="page-sub">Configure o edital, acompanhe inscrições em tempo real e envie os resultados.</p>
       {ok && <div className="alert alert-green">{ok === "1" ? "Salvo." : ok}</div>}
+      {erro && <div className="alert alert-red">{erro}</div>}
 
       <div className="grid4 mb-3">
         <div className="card stat"><div className="stat-num" style={{ color: "var(--blue)" }}>{inscritos.length}</div><div className="stat-label">Inscritos</div></div>
@@ -80,9 +74,9 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
       <h3 style={{ fontSize: 17, margin: "10px 0 12px" }}>Inscritos em tempo real</h3>
       <div className="table-wrap">
         <table className="tbl">
-          <thead><tr><th>Candidato</th><th>Matrícula</th><th>Sem.</th><th>Contato</th><th>Comprovante</th><th>Inscrição</th><th>Status</th></tr></thead>
+          <thead><tr><th>Candidato</th><th>Matrícula</th><th>Sem.</th><th>Contato</th><th>Comprovante</th><th>Inscrição</th><th>Status</th><th>Conta</th></tr></thead>
           <tbody>
-            {inscritos.length === 0 && <tr><td colSpan={7} className="muted">Nenhuma inscrição recebida.</td></tr>}
+            {inscritos.length === 0 && <tr><td colSpan={8} className="muted">Nenhuma inscrição recebida.</td></tr>}
             {inscritos.map((i) => (
               <tr key={i.id}>
                 <td><strong>{i.nome}</strong></td>
@@ -109,6 +103,16 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
                       <button className="btn btn-sm btn-ghost" type="submit" title="Reenviar e-mail de confirmação">✉</button>
                     </form>
                   </div>
+                </td>
+                <td>
+                  {i.user_id ? (
+                    <span className="badge badge-green">Conta criada</span>
+                  ) : (
+                    <form action={criarContaCandidato}>
+                      <input type="hidden" name="id" value={i.id} />
+                      <button className="btn btn-sm btn-blue" type="submit" title="Cria login limitado para o candidato acompanhar o status">Criar conta</button>
+                    </form>
+                  )}
                 </td>
               </tr>
             ))}

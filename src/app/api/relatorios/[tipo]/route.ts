@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
-import { db, frequenciaDe } from "@/lib/db";
-import { getSessao, ehTesoureiro } from "@/lib/auth";
+import { db, frequenciaDe, getConfig } from "@/lib/db";
+import { getSessao, podeVerFinanceiro } from "@/lib/auth";
 import { registrarAcao } from "@/lib/audit";
-import { toCSV, csvResponse } from "@/lib/util";
+import { toCSV, csvResponse, calcularSemestre } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
 
@@ -13,13 +13,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tip
   registrarAcao(s.id, "relatorio_exportado", tipo);
 
   if (tipo === "frequencia") {
-    const ligantes = db().prepare("SELECT id, nome, matricula, email, semestre FROM users WHERE role='ligante' ORDER BY nome").all() as
-      { id: number; nome: string; matricula: string | null; email: string | null; semestre: string | null }[];
+    const periodoAtual = getConfig("periodo_atual", "2026/2");
+    const ligantes = db().prepare("SELECT id, nome, matricula, email, semestre, turma FROM users WHERE role='ligante' ORDER BY nome").all() as
+      { id: number; nome: string; matricula: string | null; email: string | null; semestre: string | null; turma: string | null }[];
     const rows = ligantes.map((l) => {
       const f = frequenciaDe(l.id);
-      return [l.nome, l.matricula, l.email, l.semestre, f.presentes, f.total, `${f.pct}%`, f.elegivel ? "sim" : "não"];
+      const semestreCalc = calcularSemestre(l.turma, periodoAtual) ?? l.semestre;
+      return [l.nome, l.matricula, l.email, l.turma, semestreCalc, f.presentes, f.total, `${f.pct}%`, f.elegivel ? "sim" : "não"];
     });
-    return csvResponse("frequencia-lamtue.csv", toCSV(["Nome", "Matrícula", "E-mail", "Semestre", "Presenças", "Aulas", "Frequência", "Elegível certificado"], rows));
+    return csvResponse("frequencia-lamtue.csv", toCSV(["Nome", "Matrícula", "E-mail", "Turma", "Semestre", "Presenças", "Aulas", "Frequência", "Elegível certificado"], rows));
   }
 
   if (tipo === "inscritos") {
@@ -45,7 +47,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tip
   }
 
   if (tipo === "financeiro") {
-    if (!ehTesoureiro(s)) return new Response("Restrito ao Tesoureiro", { status: 403 });
+    if (!podeVerFinanceiro(s)) return new Response("Restrito à Presidência e ao Tesoureiro", { status: 403 });
     const rows = (db().prepare("SELECT tipo, descricao, valor_centavos, data FROM financeiro ORDER BY data").all() as
       { tipo: string; descricao: string; valor_centavos: number; data: string }[])
       .map((f) => [f.data, f.tipo, f.descricao, (f.valor_centavos / 100).toFixed(2).replace(".", ",")]);

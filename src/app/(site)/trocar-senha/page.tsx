@@ -1,11 +1,13 @@
-import { exigirLigante } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { getSessao } from "@/lib/auth";
 import { trocarSenha } from "@/app/actions/auth";
 import Reveal from "@/components/Reveal";
 
 export const dynamic = "force-dynamic";
 
 export default async function TrocarSenhaPage({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
-  const s = await exigirLigante();
+  const s = await getSessao();
+  if (!s) redirect("/login");
   const { erro } = await searchParams;
   return (
     <div className="container" style={{ padding: "70px 24px 20px", maxWidth: 480 }}>

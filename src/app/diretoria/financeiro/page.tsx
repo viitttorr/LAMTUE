@@ -1,4 +1,4 @@
-import { exigirDiretoria, ehTesoureiro } from "@/lib/auth";
+import { exigirDiretoria, podeVerFinanceiro } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { lancarFinanceiro, excluirLancamento } from "@/app/actions/diretoria";
 import { fmtData, fmtValor } from "@/lib/util";
@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 
 export default async function FinanceiroPage() {
   const s = await exigirDiretoria();
-  if (!ehTesoureiro(s)) redirect("/diretoria");
+  if (!podeVerFinanceiro(s)) redirect("/diretoria");
 
   const lancamentos = db().prepare("SELECT * FROM financeiro ORDER BY data DESC, id DESC").all() as
     { id: number; tipo: string; descricao: string; valor_centavos: number; data: string }[];
@@ -18,7 +18,7 @@ export default async function FinanceiroPage() {
   return (
     <>
       <h1 className="page-title">Painel Financeiro</h1>
-      <p className="page-sub">Acesso restrito ao Vice-Presidente / Tesoureiro.</p>
+      <p className="page-sub">Acesso restrito à Presidência e ao Vice-Presidente / Tesoureiro.</p>
 
       <div className="grid4">
         <div className="card stat"><div className="stat-num" style={{ color: "var(--green)", fontSize: 26 }}>{fmtValor(entradas)}</div><div className="stat-label">Entradas</div></div>

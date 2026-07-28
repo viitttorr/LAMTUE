@@ -2,6 +2,7 @@ import { exigirDiretoria } from "@/lib/auth";
 import { db, TEMAS } from "@/lib/db";
 import { salvarMaterial, excluirMaterial } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
+import { MATERIAIS_MAX_BYTES } from "@/lib/arquivos";
 
 export default async function MateriaisPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   await exigirDiretoria();
@@ -56,7 +57,7 @@ export default async function MateriaisPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="grid2" style={{ gap: 12 }}>
             <div><label className="label">Link (vídeos/externos)</label><input className="input" name="url" placeholder="https://…" /></div>
-            <div><label className="label">Ou arquivo (até 20 MB)</label><input className="input" type="file" name="arquivo" /></div>
+            <div><label className="label">Ou arquivo (até {MATERIAIS_MAX_BYTES / 1024 / 1024} MB)</label><input className="input" type="file" name="arquivo" /></div>
           </div>
           <button className="btn btn-primary btn-sm mt-2" type="submit">Publicar material</button>
         </form>

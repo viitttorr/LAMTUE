@@ -1,6 +1,7 @@
 import { exigirDiretoria } from "@/lib/auth";
 import { db, TEMAS } from "@/lib/db";
 import { salvarQuestao, moderarQuestao } from "@/app/actions/diretoria";
+import TemaSelect from "@/components/TemaSelect";
 
 export default async function QuestoesPage() {
   await exigirDiretoria();
@@ -22,10 +23,7 @@ export default async function QuestoesPage() {
             <div className="grid2" style={{ gap: 12 }}>
               <div>
                 <label className="label">Tema *</label>
-                <select className="input" name="tema" required defaultValue="">
-                  <option value="" disabled>Selecione</option>
-                  {TEMAS.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <TemaSelect name="tema" temas={TEMAS} required />
               </div>
               <div>
                 <label className="label">Dificuldade</label>

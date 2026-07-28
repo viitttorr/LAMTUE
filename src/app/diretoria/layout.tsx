@@ -1,4 +1,4 @@
-import { exigirDiretoria, ehTesoureiro, podeGerenciarGaleria } from "@/lib/auth";
+import { exigirDiretoria, podeGerenciarGaleria } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
@@ -22,7 +22,7 @@ export default async function DiretoriaLayout({ children }: { children: React.Re
     { href: "/diretoria/conteudo", label: "Site Público", icon: "☰" },
     { href: "/diretoria/relatorios", label: "Relatórios", icon: "▦" },
     ...(podeGerenciarGaleria(s) ? [{ href: "/diretoria/galeria", label: "Galeria", icon: "▧" }] : []),
-    ...(ehTesoureiro(s) ? [{ href: "/diretoria/financeiro", label: "Financeiro", icon: "$" }] : []),
+    { href: "/diretoria/financeiro", label: "Financeiro", icon: "$" },
   ];
   return (
     <AppShell titulo="ÁREA DA DIRETORIA" nome={s.nome} cargo={s.cargo} itens={itens} logoutAction={logout}>

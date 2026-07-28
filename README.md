@@ -26,7 +26,7 @@ Criados automaticamente na primeira execução. Senha inicial: **lamtue2026**
 | Diretora de Ensino e Pesquisa — Ciliandra Marin | ensino@lamtue.com |
 | Diretora de Comunicação e Extensão — Mylena Kaminski | comunicacao@lamtue.com |
 
-O painel **Financeiro** aparece apenas para o login do Tesoureiro.
+O painel **Financeiro** aparece no menu para toda a diretoria, mas o acesso é restrito à Presidência e ao Vice-Presidente/Tesoureiro.
 
 ## Ligantes
 

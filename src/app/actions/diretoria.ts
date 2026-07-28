@@ -1,9 +1,9 @@
 "use server";
 import bcrypt from "bcryptjs";
 import { db, getConfig, setConfig } from "@/lib/db";
-import { exigirDiretoria, ehTesoureiro, exigirGaleria } from "@/lib/auth";
+import { exigirDiretoria, podeVerFinanceiro, exigirGaleria } from "@/lib/auth";
 import { registrarAcao } from "@/lib/audit";
-import { salvarArquivo } from "@/lib/arquivos";
+import { salvarArquivo, MATERIAIS_MAX_BYTES } from "@/lib/arquivos";
 import { notificar, notificarLigantes } from "@/lib/notify";
 import { enviarEmail } from "@/lib/mailer";
 import { waIniciar, waDesconectar } from "@/lib/whatsapp";
@@ -85,26 +85,29 @@ export async function confirmarChamada(formData: FormData) {
 }
 
 /* ── Ligantes ──────────────────────────────────── */
-export async function salvarLigante(formData: FormData) {
+export async function salvarMembro(formData: FormData) {
   const s = await exigirDiretoria();
   const id = Number(formData.get("id") || 0);
   const nome = String(formData.get("nome") || "").trim();
   const matricula = String(formData.get("matricula") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase() || null;
   const telefone = String(formData.get("telefone") || "").trim() || null;
-  const semestre = String(formData.get("semestre") || "").trim() || null;
+  const role = String(formData.get("role") || "ligante") === "diretoria" ? "diretoria" : "ligante";
+  const turma = role === "ligante" ? String(formData.get("turma") || "").trim() || null : null;
+  const cargo = role === "diretoria" ? String(formData.get("cargo") || "").trim() || null : null;
   if (!nome || !matricula) redirect("/diretoria/ligantes?erro=" + encodeURIComponent("Nome e matrícula são obrigatórios."));
   try {
     if (id) {
-      db().prepare("UPDATE users SET nome=?, matricula=?, email=?, telefone=?, semestre=? WHERE id=? AND role='ligante'")
-        .run(nome, matricula, email, telefone, semestre, id);
-      registrarAcao(s.id, "ligante_editado", `#${id} ${nome}`);
+      db().prepare(
+        "UPDATE users SET nome=?, matricula=?, email=?, telefone=?, turma=?, role=?, cargo=? WHERE id=? AND role IN ('ligante','diretoria')"
+      ).run(nome, matricula, email, telefone, turma, role, cargo, id);
+      registrarAcao(s.id, "membro_editado", `#${id} ${nome}`);
     } else {
       // credencial temporária = matrícula (troca obrigatória no 1º login)
       db().prepare(
-        "INSERT INTO users (nome, matricula, email, telefone, semestre, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,'ligante',1)"
-      ).run(nome, matricula, email, telefone, semestre, bcrypt.hashSync(matricula, 10));
-      registrarAcao(s.id, "ligante_cadastrado", `${nome} (${matricula})`);
+        "INSERT INTO users (nome, matricula, email, telefone, turma, cargo, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,?,?,1)"
+      ).run(nome, matricula, email, telefone, turma, cargo, bcrypt.hashSync(matricula, 10), role);
+      registrarAcao(s.id, "membro_cadastrado", `${nome} (${matricula}) — ${role}`);
     }
   } catch {
     redirect("/diretoria/ligantes?erro=" + encodeURIComponent("Matrícula ou e-mail já cadastrado."));
@@ -121,15 +124,15 @@ export async function importarLigantes(formData: FormData) {
   const linhas = texto.split(/\r?\n/).filter((l) => l.trim());
   let importados = 0, ignorados = 0;
   const ins = db().prepare(
-    "INSERT INTO users (nome, matricula, email, telefone, semestre, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,'ligante',1)"
+    "INSERT INTO users (nome, matricula, email, telefone, turma, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,'ligante',1)"
   );
   for (const [i, linha] of linhas.entries()) {
     const cols = linha.split(/[;,]/).map((c) => c.trim().replace(/^"|"$/g, ""));
     if (i === 0 && /nome/i.test(cols[0])) continue; // cabeçalho
-    const [nome, matricula, email, telefone, semestre] = cols;
+    const [nome, matricula, email, telefone, turma] = cols;
     if (!nome || !matricula) { ignorados++; continue; }
     try {
-      ins.run(nome, matricula, email?.toLowerCase() || null, telefone || null, semestre || null, bcrypt.hashSync(matricula, 10));
+      ins.run(nome, matricula, email?.toLowerCase() || null, telefone || null, turma || null, bcrypt.hashSync(matricula, 10));
       importados++;
     } catch { ignorados++; }
   }
@@ -141,8 +144,8 @@ export async function importarLigantes(formData: FormData) {
 export async function alternarAtivo(formData: FormData) {
   const s = await exigirDiretoria();
   const id = Number(formData.get("id"));
-  db().prepare("UPDATE users SET ativo = 1 - ativo WHERE id = ? AND role='ligante'").run(id);
-  registrarAcao(s.id, "ligante_ativado_desativado", `#${id}`);
+  db().prepare("UPDATE users SET ativo = 1 - ativo WHERE id = ? AND role IN ('ligante','diretoria')").run(id);
+  registrarAcao(s.id, "membro_ativado_desativado", `#${id}`);
   revalidatePath("/diretoria/ligantes");
 }
 
@@ -158,7 +161,7 @@ export async function salvarMaterial(formData: FormData) {
   if (!titulo || !tema) return;
   let arquivoId: number | null = null;
   try {
-    arquivoId = await salvarArquivo(formData.get("arquivo") as File | null);
+    arquivoId = await salvarArquivo(formData.get("arquivo") as File | null, MATERIAIS_MAX_BYTES);
   } catch (e) {
     redirect("/diretoria/materiais?erro=" + encodeURIComponent(e instanceof Error ? e.message : "Falha no upload."));
   }
@@ -288,6 +291,30 @@ export async function alterarStatusInscricao(formData: FormData) {
   revalidatePath("/diretoria/seletivo");
 }
 
+/**
+ * Cria uma conta de acesso limitado (role='candidato') para o inscrito no
+ * seletivo poder acompanhar o status pelo portal, antes mesmo do resultado.
+ * Login/senha temporária = matrícula, mesma convenção de salvarMembro.
+ */
+export async function criarContaCandidato(formData: FormData) {
+  const s = await exigirDiretoria();
+  const id = Number(formData.get("id"));
+  const insc = db().prepare("SELECT * FROM inscricoes WHERE id = ?").get(id) as
+    | { id: number; nome: string; matricula: string; email: string; telefone: string; semestre: string; user_id: number | null }
+    | undefined;
+  if (!insc || insc.user_id) return;
+  try {
+    const r = db().prepare(
+      "INSERT INTO users (nome, matricula, email, telefone, semestre, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,'candidato',1)"
+    ).run(insc.nome, insc.matricula, insc.email.toLowerCase(), insc.telefone, insc.semestre, bcrypt.hashSync(insc.matricula, 10));
+    db().prepare("UPDATE inscricoes SET user_id = ? WHERE id = ?").run(r.lastInsertRowid, id);
+    registrarAcao(s.id, "candidato_conta_criada", `#${id} ${insc.nome}`);
+  } catch {
+    redirect("/diretoria/seletivo?erro=" + encodeURIComponent("Matrícula ou e-mail já cadastrado em outra conta."));
+  }
+  revalidatePath("/diretoria/seletivo");
+}
+
 const TEXTOS_RESULTADO: Record<string, { assunto: string; corpo: (nome: string) => string }> = {
   aprovado: {
     assunto: "Resultado do Processo Seletivo LAMTUE — Aprovado(a)! 🎉",
@@ -321,21 +348,31 @@ export async function enviarResultados(formData: FormData) {
 export async function matricularAprovados() {
   const s = await exigirDiretoria();
   const aprovados = db().prepare(
-    "SELECT nome, matricula, email, telefone, semestre FROM inscricoes WHERE status='aprovado'"
-  ).all() as { nome: string; matricula: string; email: string; telefone: string; semestre: string }[];
-  let criados = 0;
+    "SELECT id, nome, matricula, email, telefone, semestre, user_id FROM inscricoes WHERE status='aprovado'"
+  ).all() as { id: number; nome: string; matricula: string; email: string; telefone: string; semestre: string; user_id: number | null }[];
+  let criados = 0, promovidos = 0;
   const ins = db().prepare(
     "INSERT INTO users (nome, matricula, email, telefone, semestre, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,'ligante',1)"
   );
+  const promove = db().prepare("UPDATE users SET role='ligante' WHERE id = ? AND role='candidato'");
+  const vincula = db().prepare("UPDATE inscricoes SET user_id = ? WHERE id = ?");
   for (const a of aprovados) {
+    if (a.user_id) {
+      // já tinha conta de candidato (acesso limitado) — só promove, sem mexer na senha
+      promove.run(a.user_id);
+      promovidos++;
+      continue;
+    }
     try {
-      ins.run(a.nome, a.matricula, a.email.toLowerCase(), a.telefone, a.semestre, bcrypt.hashSync(a.matricula, 10));
+      const r = ins.run(a.nome, a.matricula, a.email.toLowerCase(), a.telefone, a.semestre, bcrypt.hashSync(a.matricula, 10));
+      vincula.run(r.lastInsertRowid, a.id);
       criados++;
     } catch { /* já cadastrado */ }
   }
-  registrarAcao(s.id, "aprovados_matriculados", `${criados} contas criadas`);
+  registrarAcao(s.id, "aprovados_matriculados", `${criados} contas criadas, ${promovidos} promovidas`);
   revalidatePath("/diretoria/ligantes");
-  redirect("/diretoria/ligantes?ok=" + encodeURIComponent(`${criados} conta(s) de ligante criada(s) a partir dos aprovados.`));
+  revalidatePath("/diretoria/seletivo");
+  redirect("/diretoria/ligantes?ok=" + encodeURIComponent(`${criados} conta(s) criada(s), ${promovidos} candidato(s) promovido(s) a ligante.`));
 }
 
 /* ── Avisos e notificações ─────────────────────── */
@@ -390,7 +427,7 @@ export async function desconectarWhatsApp() {
 /* ── Financeiro (restrito ao Tesoureiro) ───────── */
 export async function lancarFinanceiro(formData: FormData) {
   const s = await exigirDiretoria();
-  if (!ehTesoureiro(s)) redirect("/diretoria");
+  if (!podeVerFinanceiro(s)) redirect("/diretoria");
   const tipo = String(formData.get("tipo") || "entrada");
   const descricao = String(formData.get("descricao") || "").trim();
   const valor = Math.round(Number(String(formData.get("valor") || "0").replace(/\./g, "").replace(",", ".")) * 100);
@@ -404,7 +441,7 @@ export async function lancarFinanceiro(formData: FormData) {
 
 export async function excluirLancamento(formData: FormData) {
   const s = await exigirDiretoria();
-  if (!ehTesoureiro(s)) redirect("/diretoria");
+  if (!podeVerFinanceiro(s)) redirect("/diretoria");
   const id = Number(formData.get("id"));
   db().prepare("DELETE FROM financeiro WHERE id = ?").run(id);
   registrarAcao(s.id, "lancamento_excluido", `#${id}`);

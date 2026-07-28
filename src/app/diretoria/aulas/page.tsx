@@ -3,6 +3,7 @@ import { db, TEMAS } from "@/lib/db";
 import { salvarAula, excluirAula, lembrarAula } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
 import Link from "next/link";
+import TemaSelect from "@/components/TemaSelect";
 
 export default async function AulasPage() {
   await exigirDiretoria();
@@ -24,10 +25,7 @@ export default async function AulasPage() {
             <div><label className="label">Título *</label><input className="input" name="titulo" required /></div>
             <div>
               <label className="label">Tema</label>
-              <select className="input" name="tema" defaultValue="">
-                <option value="">— livre —</option>
-                {TEMAS.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <TemaSelect name="tema" temas={TEMAS} allowBlank />
             </div>
           </div>
           <div className="grid2" style={{ gap: 12 }}>

@@ -23,6 +23,14 @@ export const TEMAS = [
   "Acesso Venoso de Emergência",
 ] as const;
 
+/** Rótulos do status de inscrição no seletivo — usado na tela da diretoria e no painel do candidato. */
+export const STATUS_LABEL: Record<string, { label: string; badge: string }> = {
+  pendente: { label: "Pendente", badge: "badge-amber" },
+  aprovado: { label: "Aprovado", badge: "badge-green" },
+  reprovado: { label: "Reprovado", badge: "badge-red" },
+  espera: { label: "Lista de espera", badge: "badge-blue" },
+};
+
 export const DIRETORIA = [
   { nome: "Vitor Rossatto", cargo: "Presidente", email: "presidente@lamtue.com" },
   { nome: "Leonardo Pramio", cargo: "Vice-Presidente / Tesoureiro", email: "tesouraria@lamtue.com" },
@@ -245,6 +253,56 @@ function migrate(d: Database.Database) {
   );
   CREATE INDEX IF NOT EXISTS idx_galeria_fotos_album ON galeria_fotos(album_id);
   `);
+
+  // Coluna aditiva (ALTER não é idempotente como CREATE TABLE IF NOT EXISTS acima)
+  const userCols = d.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  if (!userCols.some((c) => c.name === "turma")) {
+    d.exec("ALTER TABLE users ADD COLUMN turma TEXT");
+  }
+  const inscCols = d.prepare("PRAGMA table_info(inscricoes)").all() as { name: string }[];
+  if (!inscCols.some((c) => c.name === "user_id")) {
+    d.exec("ALTER TABLE inscricoes ADD COLUMN user_id INTEGER REFERENCES users(id)");
+  }
+
+  // SQLite não permite ALTER numa CHECK constraint — precisa recriar a tabela.
+  // Só roda se 'candidato' ainda não estiver na CHECK de role (idempotente).
+  const usersSql = (d.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get() as { sql: string }).sql;
+  if (!usersSql.includes("'candidato'")) {
+    const cols = d.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+    const colList = cols.map((c) => c.name).join(", ");
+    d.pragma("foreign_keys = OFF");
+    // impede o RENAME de reescrever a FK de outras tabelas (audit_log, presencas,
+    // financeiro etc.) para apontar para "users_old" — comportamento padrão do
+    // SQLite moderno que quebraria essas referências depois do DROP TABLE abaixo.
+    d.pragma("legacy_alter_table = ON");
+    const rebuild = d.transaction(() => {
+      d.exec("ALTER TABLE users RENAME TO users_old");
+      d.exec(`
+        CREATE TABLE users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nome TEXT NOT NULL,
+          email TEXT UNIQUE,
+          matricula TEXT UNIQUE,
+          telefone TEXT,
+          semestre TEXT,
+          senha_hash TEXT NOT NULL,
+          role TEXT NOT NULL CHECK (role IN ('ligante','diretoria','candidato')),
+          cargo TEXT,
+          ativo INTEGER NOT NULL DEFAULT 1,
+          must_change_password INTEGER NOT NULL DEFAULT 1,
+          criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+          turma TEXT
+        )
+      `);
+      d.exec(`INSERT INTO users (${colList}) SELECT ${colList} FROM users_old`);
+      d.exec("DROP TABLE users_old");
+    });
+    rebuild();
+    d.pragma("legacy_alter_table = OFF");
+    d.pragma("foreign_keys = ON");
+    const orfaos = d.pragma("foreign_key_check") as unknown[];
+    if (orfaos.length > 0) throw new Error(`Migração de users deixou ${orfaos.length} referência(s) órfã(s): ${JSON.stringify(orfaos)}`);
+  }
 
   // Seed: diretoria 2026–2027 (senha inicial "lamtue2026", troca obrigatória)
   const count = (d.prepare("SELECT COUNT(*) AS n FROM users WHERE role='diretoria'").get() as { n: number }).n;

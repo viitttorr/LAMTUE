@@ -24,7 +24,7 @@ export async function login(formData: FormData) {
   await setSessionCookie(user.id);
   registrarAcao(user.id, "login");
   if (user.must_change_password) redirect("/trocar-senha");
-  redirect(user.role === "diretoria" ? "/diretoria" : "/ligante");
+  redirect(user.role === "diretoria" ? "/diretoria" : user.role === "candidato" ? "/candidato" : "/ligante");
 }
 
 export async function trocarSenha(formData: FormData) {
@@ -42,7 +42,7 @@ export async function trocarSenha(formData: FormData) {
 
   db().prepare("UPDATE users SET senha_hash = ?, must_change_password = 0 WHERE id = ?").run(bcrypt.hashSync(nova, 10), s.id);
   registrarAcao(s.id, "troca_senha");
-  redirect(s.role === "diretoria" ? "/diretoria" : "/ligante");
+  redirect(s.role === "diretoria" ? "/diretoria" : s.role === "candidato" ? "/candidato" : "/ligante");
 }
 
 export async function logout() {

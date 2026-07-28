@@ -9,7 +9,7 @@ const COOKIE = "lamtue_session";
 export type Sessao = {
   id: number;
   nome: string;
-  role: "ligante" | "diretoria";
+  role: "ligante" | "diretoria" | "candidato";
   cargo: string | null;
   mustChange: boolean;
 };
@@ -52,7 +52,7 @@ export async function getSessao(): Promise<Sessao | null> {
   const user = db()
     .prepare("SELECT id, nome, role, cargo, ativo, must_change_password FROM users WHERE id = ?")
     .get(Number(parts[0])) as
-    | { id: number; nome: string; role: "ligante" | "diretoria"; cargo: string | null; ativo: number; must_change_password: number }
+    | { id: number; nome: string; role: "ligante" | "diretoria" | "candidato"; cargo: string | null; ativo: number; must_change_password: number }
     | undefined;
   if (!user || !user.ativo) return null;
   return { id: user.id, nome: user.nome, role: user.role, cargo: user.cargo, mustChange: !!user.must_change_password };
@@ -61,18 +61,32 @@ export async function getSessao(): Promise<Sessao | null> {
 export async function exigirLigante(): Promise<Sessao> {
   const s = await getSessao();
   if (!s) redirect("/login");
+  if (s.role === "candidato") redirect("/candidato");
   return s;
 }
 
 export async function exigirDiretoria(): Promise<Sessao> {
   const s = await getSessao();
   if (!s) redirect("/login");
+  if (s.role === "candidato") redirect("/candidato");
   if (s.role !== "diretoria") redirect("/ligante");
+  return s;
+}
+
+export async function exigirCandidato(): Promise<Sessao> {
+  const s = await getSessao();
+  if (!s) redirect("/login");
+  if (s.role !== "candidato") redirect(s.role === "diretoria" ? "/diretoria" : "/ligante");
   return s;
 }
 
 export function ehTesoureiro(s: Sessao): boolean {
   return s.role === "diretoria" && !!s.cargo && s.cargo.toLowerCase().includes("tesoureiro");
+}
+
+/** Tesoureiro e Presidente têm acesso ao módulo financeiro. */
+export function podeVerFinanceiro(s: Sessao): boolean {
+  return ehTesoureiro(s) || (s.role === "diretoria" && !!s.cargo && s.cargo.toLowerCase().includes("presidente"));
 }
 
 /**

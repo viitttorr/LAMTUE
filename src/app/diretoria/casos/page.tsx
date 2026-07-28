@@ -2,6 +2,7 @@ import Link from "next/link";
 import { exigirDiretoria } from "@/lib/auth";
 import { db, TEMAS } from "@/lib/db";
 import { salvarCaso, excluirCaso } from "@/app/actions/diretoria";
+import TemaSelect from "@/components/TemaSelect";
 
 const EXEMPLO = `? Qual a primeira conduta na avaliação primária?
 * Garantir a permeabilidade da via aérea com controle da coluna cervical | O "A" do ABCDE sempre vem primeiro.
@@ -36,10 +37,7 @@ export default async function CasosAdminPage({ searchParams }: { searchParams: P
             <div><label className="label">Título *</label><input className="input" name="titulo" required /></div>
             <div>
               <label className="label">Tema *</label>
-              <select className="input" name="tema" required defaultValue="">
-                <option value="" disabled>Selecione</option>
-                {TEMAS.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <TemaSelect name="tema" temas={TEMAS} required />
             </div>
             <div>
               <label className="label">Visibilidade</label>
