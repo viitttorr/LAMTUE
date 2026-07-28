@@ -224,3 +224,6 @@ CREATE TABLE IF NOT EXISTS galeria_fotos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_galeria_fotos_album ON galeria_fotos(album_id);
+
+-- Linha unica obrigatoria (id=1) para o painel de configuracao do seletivo.
+INSERT OR IGNORE INTO seletivo (id) VALUES (1);

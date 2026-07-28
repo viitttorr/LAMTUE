@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
+import { CARGOS_DIRETORIA } from "@/lib/cargos";
 
 /**
  * Escolha de papel (Ligante/Diretoria) no cadastro de conta. Ligante mostra
- * o campo Turma; Diretoria revela um campo de cargo livre — as permissões
- * (podeVerFinanceiro, podeGerenciarGaleria etc.) já casam substrings nesse
- * texto, então não há lista fixa de cargos aqui de propósito.
+ * o campo Turma; Diretoria revela um select de cargo com opções fechadas —
+ * as permissões (podeVerFinanceiro, podeGerenciarGaleria etc.) casam
+ * substrings nesses textos, então manter a lista fechada evita cargos
+ * digitados livremente que não batam com nenhuma permissão.
  */
 export default function RoleCargoFields({
   defaultRole = "ligante",
@@ -31,7 +33,13 @@ export default function RoleCargoFields({
         {role === "ligante" ? (
           <div><label className="label">Turma</label><input className="input" name="turma" placeholder="T7" defaultValue={defaultTurma} /></div>
         ) : (
-          <div><label className="label">Cargo *</label><input className="input" name="cargo" placeholder="Presidente, Diretora de…" required defaultValue={defaultCargo} /></div>
+          <div>
+            <label className="label">Cargo *</label>
+            <select className="input" name="cargo" required defaultValue={defaultCargo}>
+              <option value="" disabled>Selecione</option>
+              {CARGOS_DIRETORIA.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
         )}
       </div>
     </>

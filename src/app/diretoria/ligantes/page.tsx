@@ -1,12 +1,14 @@
-import { exigirDiretoria } from "@/lib/auth";
+import Link from "next/link";
+import { exigirDiretoria, ehPresidente } from "@/lib/auth";
 import { db, frequenciaDe, getConfig } from "@/lib/db";
-import { salvarMembro, importarLigantes, alternarAtivo } from "@/app/actions/diretoria";
+import { salvarMembro, importarLigantes, alternarAtivo, redefinirSenhaMembro } from "@/app/actions/diretoria";
 import { calcularSemestre } from "@/lib/util";
 import RoleCargoFields from "@/components/RoleCargoFields";
 
-export default async function LigantesPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
-  await exigirDiretoria();
-  const { ok, erro } = await searchParams;
+export default async function LigantesPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string; editar?: string }> }) {
+  const s = await exigirDiretoria();
+  const isPresidente = ehPresidente(s);
+  const { ok, erro, editar } = await searchParams;
   const periodoAtual = await getConfig("periodo_atual", "2026/2");
   const membros = (await db().prepare(
     "SELECT id, nome, matricula, email, telefone, semestre, turma, role, cargo, ativo, must_change_password FROM users WHERE role IN ('ligante','diretoria') ORDER BY role, nome"
@@ -18,6 +20,7 @@ export default async function LigantesPage({ searchParams }: { searchParams: Pro
   const frequencias = new Map(
     await Promise.all(membros.filter((m) => m.role === "ligante").map(async (m) => [m.id, await frequenciaDe(m.id)] as const))
   );
+  const editando = isPresidente && editar ? membros.find((m) => m.id === Number(editar)) ?? null : null;
 
   return (
     <>
@@ -27,19 +30,27 @@ export default async function LigantesPage({ searchParams }: { searchParams: Pro
       {erro && <div className="alert alert-red">{erro}</div>}
 
       <div className="grid2" style={{ alignItems: "start" }}>
-        <div className="card">
-          <h3 style={{ fontSize: 16 }}>Cadastrar conta</h3>
-          <form action={salvarMembro}>
+        <div className="card" id="form-conta">
+          <h3 style={{ fontSize: 16 }}>{editando ? `Editar conta — ${editando.nome}` : "Cadastrar conta"}</h3>
+          <form action={salvarMembro} key={editando?.id ?? "novo"}>
+            {editando && <input type="hidden" name="id" value={editando.id} />}
             <label className="label">Nome completo *</label>
-            <input className="input" name="nome" required />
-            <RoleCargoFields />
+            <input className="input" name="nome" required defaultValue={editando?.nome ?? ""} />
+            <RoleCargoFields
+              defaultRole={editando?.role ?? "ligante"}
+              defaultTurma={editando?.turma ?? ""}
+              defaultCargo={editando?.cargo ?? ""}
+            />
             <div className="grid2" style={{ gap: 12 }}>
-              <div><label className="label">Matrícula *</label><input className="input" name="matricula" required /></div>
-              <div><label className="label">E-mail</label><input className="input" type="email" name="email" /></div>
+              <div><label className="label">Matrícula (login) *</label><input className="input" name="matricula" required defaultValue={editando?.matricula ?? ""} /></div>
+              <div><label className="label">E-mail</label><input className="input" type="email" name="email" defaultValue={editando?.email ?? ""} /></div>
             </div>
             <label className="label">Telefone</label>
-            <input className="input" name="telefone" />
-            <button className="btn btn-primary btn-sm mt-2" type="submit">Cadastrar</button>
+            <input className="input" name="telefone" defaultValue={editando?.telefone ?? ""} />
+            <div className="flex mt-2" style={{ gap: 10 }}>
+              <button className="btn btn-primary btn-sm" type="submit">{editando ? "Salvar alterações" : "Cadastrar"}</button>
+              {editando && <Link href="/diretoria/ligantes" className="btn btn-sm">Cancelar edição</Link>}
+            </div>
           </form>
         </div>
         <div className="card">
@@ -82,12 +93,25 @@ export default async function LigantesPage({ searchParams }: { searchParams: Pro
                   </td>
                   <td>{m.ativo ? <span className="badge badge-green">Ativo</span> : <span className="badge badge-red">Inativo</span>}</td>
                   <td>
-                    <form action={alternarAtivo}>
-                      <input type="hidden" name="id" value={m.id} />
-                      <button className={`btn btn-sm ${m.ativo ? "btn-danger" : "btn-blue"}`} type="submit">
-                        {m.ativo ? "Desativar" : "Ativar"}
-                      </button>
-                    </form>
+                    <div className="flex" style={{ gap: 6, flexWrap: "wrap" }}>
+                      {isPresidente && (
+                        <Link href={`/diretoria/ligantes?editar=${m.id}#form-conta`} className="btn btn-sm">Editar</Link>
+                      )}
+                      {isPresidente && (
+                        <form action={redefinirSenhaMembro}>
+                          <input type="hidden" name="id" value={m.id} />
+                          <button className="btn btn-sm" type="submit" title="Redefine a senha para a matrícula — o usuário troca no próximo acesso">
+                            Redefinir senha
+                          </button>
+                        </form>
+                      )}
+                      <form action={alternarAtivo}>
+                        <input type="hidden" name="id" value={m.id} />
+                        <button className={`btn btn-sm ${m.ativo ? "btn-danger" : "btn-blue"}`} type="submit">
+                          {m.ativo ? "Desativar" : "Ativar"}
+                        </button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               );

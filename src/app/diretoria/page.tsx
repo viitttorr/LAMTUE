@@ -5,8 +5,9 @@ import { fmtData } from "@/lib/util";
 import Link from "next/link";
 import Counter from "@/components/Counter";
 
-export default async function DashboardDiretoria() {
+export default async function DashboardDiretoria({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
   const s = await exigirDiretoria();
+  const { ok } = await searchParams;
   const ligantes = (await db().prepare("SELECT id, nome FROM users WHERE role='ligante' AND ativo=1").all()) as { id: number; nome: string }[];
   const aulasRealizadas = ((await db().prepare("SELECT COUNT(*) AS n FROM aulas WHERE data <= date('now')").get()) as { n: number }).n;
   const aulasPlanejadas = ((await db().prepare("SELECT COUNT(*) AS n FROM aulas").get()) as { n: number }).n;
@@ -83,6 +84,7 @@ export default async function DashboardDiretoria() {
 
           <div className="card mt-2">
             <h3 style={{ fontSize: 16 }}>Configurações gerais</h3>
+            {ok && <div className="alert alert-green">Configurações salvas.</div>}
             <form action={salvarConfiguracoes}>
               <div className="grid2" style={{ gap: 12 }}>
                 <div>

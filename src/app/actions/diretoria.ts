@@ -1,7 +1,7 @@
 "use server";
 import bcrypt from "bcryptjs";
 import { db, getConfig, setConfig } from "@/lib/db";
-import { exigirDiretoria, podeVerFinanceiro, exigirGaleria } from "@/lib/auth";
+import { exigirDiretoria, podeVerFinanceiro, exigirGaleria, exigirPresidente } from "@/lib/auth";
 import { registrarAcao } from "@/lib/audit";
 import { salvarArquivo, MATERIAIS_MAX_BYTES } from "@/lib/arquivos";
 import { notificar, notificarLigantes } from "@/lib/notify";
@@ -86,8 +86,9 @@ export async function confirmarChamada(formData: FormData) {
 
 /* ── Ligantes ──────────────────────────────────── */
 export async function salvarMembro(formData: FormData) {
-  const s = await exigirDiretoria();
   const id = Number(formData.get("id") || 0);
+  // criar conta: qualquer diretoria; editar conta existente: só o Presidente
+  const s = id ? await exigirPresidente() : await exigirDiretoria();
   const nome = String(formData.get("nome") || "").trim();
   const matricula = String(formData.get("matricula") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase() || null;
@@ -147,6 +148,20 @@ export async function alternarAtivo(formData: FormData) {
   await db().prepare("UPDATE users SET ativo = 1 - ativo WHERE id = ? AND role IN ('ligante','diretoria')").run(id);
   await registrarAcao(s.id, "membro_ativado_desativado", `#${id}`);
   revalidatePath("/diretoria/ligantes");
+}
+
+/** Redefine a senha de volta à matrícula (mesma convenção do 1º acesso) — restrito ao Presidente. */
+export async function redefinirSenhaMembro(formData: FormData) {
+  const s = await exigirPresidente();
+  const id = Number(formData.get("id"));
+  const membro = (await db().prepare("SELECT matricula FROM users WHERE id = ? AND role IN ('ligante','diretoria')").get(id)) as
+    { matricula: string | null } | undefined;
+  if (!membro?.matricula) redirect("/diretoria/ligantes?erro=" + encodeURIComponent("Conta sem matrícula definida."));
+  await db().prepare("UPDATE users SET senha_hash = ?, must_change_password = 1 WHERE id = ?")
+    .run(bcrypt.hashSync(membro.matricula, 10), id);
+  await registrarAcao(s.id, "membro_senha_redefinida", `#${id}`);
+  revalidatePath("/diretoria/ligantes");
+  redirect("/diretoria/ligantes?ok=" + encodeURIComponent("Senha redefinida para a matrícula. O usuário deverá trocá-la no próximo acesso."));
 }
 
 /* ── Materiais ─────────────────────────────────── */
@@ -279,6 +294,7 @@ export async function salvarSeletivo(formData: FormData) {
   revalidatePath("/diretoria/seletivo");
   revalidatePath("/seletivo");
   revalidatePath("/");
+  redirect("/diretoria/seletivo?ok=1");
 }
 
 export async function alterarStatusInscricao(formData: FormData) {
@@ -490,6 +506,7 @@ export async function salvarConfiguracoes(formData: FormData) {
   await setConfig("email_contato", String(formData.get("email_contato") || "").trim());
   await registrarAcao(s.id, "configuracoes_salvas");
   revalidatePath("/diretoria");
+  redirect("/diretoria?ok=1");
 }
 
 /* reenvio de confirmação de inscrição, caso necessário */

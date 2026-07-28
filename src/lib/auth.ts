@@ -84,6 +84,23 @@ export function ehTesoureiro(s: Sessao): boolean {
   return s.role === "diretoria" && !!s.cargo && s.cargo.toLowerCase().includes("tesoureiro");
 }
 
+/**
+ * "vice-presidente" contém "presidente": a exclusão é proposital, para o
+ * acesso não ser concedido por coincidência de texto.
+ */
+export function ehPresidente(s: Sessao): boolean {
+  if (s.role !== "diretoria" || !s.cargo) return false;
+  const c = s.cargo.toLowerCase();
+  return c.includes("presidente") && !c.includes("vice");
+}
+
+/** Edição completa de contas (senha, login, e-mail, papel etc.) é restrita ao Presidente. */
+export async function exigirPresidente(): Promise<Sessao> {
+  const s = await exigirDiretoria();
+  if (!ehPresidente(s)) redirect("/diretoria/ligantes");
+  return s;
+}
+
 /** Tesoureiro e Presidente têm acesso ao módulo financeiro. */
 export function podeVerFinanceiro(s: Sessao): boolean {
   return ehTesoureiro(s) || (s.role === "diretoria" && !!s.cargo && s.cargo.toLowerCase().includes("presidente"));
@@ -95,12 +112,7 @@ export function podeVerFinanceiro(s: Sessao): boolean {
  */
 export function podeGerenciarGaleria(s: Sessao): boolean {
   if (s.role !== "diretoria" || !s.cargo) return false;
-  const c = s.cargo.toLowerCase();
-  // "vice-presidente" contém "presidente": a exclusão é proposital, para o
-  // acesso não ser concedido por coincidência de texto. Para liberar a
-  // vice-presidência, basta remover a checagem de "vice".
-  const ehPresidencia = c.includes("presidente") && !c.includes("vice");
-  return c.includes("comunica") || ehPresidencia;
+  return s.cargo.toLowerCase().includes("comunica") || ehPresidente(s);
 }
 
 /** Porta de entrada das telas de gestão da galeria. */

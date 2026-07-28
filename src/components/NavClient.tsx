@@ -66,32 +66,40 @@ export default function NavClient({ area, entrarLabel }: { area: string; entrarL
   );
 
   return (
-    <header className={`nav${rolou ? " scrolled" : ""}`}>
-      <div className="container nav-inner">
-        <Link href="/" className="flex" style={{ gap: 12 }} aria-label="LAMTUE — página inicial">
-          <Image src="/logo.png" alt="LAMTUE" width={40} height={40} className="logo-ring" style={{ borderRadius: "50%" }} />
-          <div>
-            <div style={{ font: "700 17px var(--font-display)", letterSpacing: "0.12em" }}>LAMTUE</div>
-            <div style={{ fontSize: 10, color: "var(--text-3)", letterSpacing: "0.05em" }}>URI ERECHIM · CAMED</div>
-          </div>
-        </Link>
-        <nav className="nav-links" aria-label="Menu institucional">{itens}</nav>
-        <button
-          type="button"
-          className="nav-burger"
-          aria-expanded={aberto}
-          aria-controls="menu-movel"
-          aria-label={aberto ? "Fechar menu" : "Abrir menu"}
-          onClick={() => setAberto((v) => !v)}
-        >
-          <span /><span /><span />
-        </button>
-      </div>
+    <>
+      <header className={`nav${rolou ? " scrolled" : ""}`}>
+        <div className="container nav-inner">
+          <Link href="/" className="flex" style={{ gap: 12 }} aria-label="LAMTUE — página inicial">
+            <Image src="/logo.png" alt="LAMTUE" width={40} height={40} className="logo-ring" style={{ borderRadius: "50%" }} />
+            <div>
+              <div style={{ font: "700 17px var(--font-display)", letterSpacing: "0.12em" }}>LAMTUE</div>
+              <div style={{ fontSize: 10, color: "var(--text-3)", letterSpacing: "0.05em" }}>URI ERECHIM · CAMED</div>
+            </div>
+          </Link>
+          <nav className="nav-links" aria-label="Menu institucional">{itens}</nav>
+          <button
+            type="button"
+            className="nav-burger"
+            aria-expanded={aberto}
+            aria-controls="menu-movel"
+            aria-label={aberto ? "Fechar menu" : "Abrir menu"}
+            onClick={() => setAberto((v) => !v)}
+          >
+            <span /><span /><span />
+          </button>
+        </div>
+        <ScrollHeartbeat />
+      </header>
+      {/* fora do <header>: o backdrop-filter do header cria um containing
+          block para os descendentes fixed, o que quebrava o inset da gaveta
+          móvel (fundo e fechamento não apareciam) */}
       <div className={`nav-scrim${aberto ? " open" : ""}`} onClick={() => setAberto(false)} aria-hidden />
       <nav id="menu-movel" className={`nav-drawer${aberto ? " open" : ""}`} aria-label="Menu institucional">
+        <button type="button" className="nav-drawer-close" aria-label="Fechar menu" onClick={() => setAberto(false)}>
+          <span /><span />
+        </button>
         {itens}
       </nav>
-      <ScrollHeartbeat />
-    </header>
+    </>
   );
 }

@@ -21,6 +21,7 @@ export default async function Home() {
   const seletivo = (await db().prepare("SELECT * FROM seletivo WHERE id = 1").get()) as {
     ativo: number; vagas: number; prazo: string | null;
   };
+  const inscricoesEncerradas = seletivo.prazo ? new Date(seletivo.prazo + "T23:59:59") < new Date() : false;
   const inscritos = ((await db().prepare("SELECT COUNT(*) AS n FROM inscricoes").get()) as { n: number }).n;
   const ligantes = ((await db().prepare("SELECT COUNT(*) AS n FROM users WHERE role='ligante' AND ativo=1").get()) as { n: number }).n;
   const aulas = ((await db().prepare("SELECT COUNT(*) AS n FROM aulas").get()) as { n: number }).n;
@@ -88,8 +89,12 @@ export default async function Home() {
                 <div className="flex" style={{ gap: 34, flexWrap: "wrap" }}>
                   <div><div className="small">Vagas</div><strong style={{ fontSize: 22, fontFamily: "var(--font-display)" }}><Counter to={seletivo.vagas} /></strong></div>
                   <div><div className="small">Inscritos</div><strong style={{ fontSize: 22, fontFamily: "var(--font-display)" }}><Counter to={inscritos} /></strong></div>
-                  {seletivo.prazo && <div><div className="small">Encerra em</div><Countdown prazo={seletivo.prazo} /></div>}
-                  <Link href="/seletivo" className="btn btn-primary">Inscreva-se</Link>
+                  {seletivo.prazo && !inscricoesEncerradas && <div><div className="small">Encerra em</div><Countdown prazo={seletivo.prazo} /></div>}
+                  {inscricoesEncerradas ? (
+                    <Link href="/login" className="btn btn-primary">Acompanhar</Link>
+                  ) : (
+                    <Link href="/seletivo" className="btn btn-primary">Inscreva-se</Link>
+                  )}
                 </div>
               </div>
             </div>
