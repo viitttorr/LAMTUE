@@ -504,6 +504,12 @@ export async function salvarConfiguracoes(formData: FormData) {
   await setConfig("periodo_atual", String(formData.get("periodo") || (await getConfig("periodo_atual"))));
   await setConfig("horas_por_aula", String(Number(formData.get("horas_por_aula")) || 2));
   await setConfig("email_contato", String(formData.get("email_contato") || "").trim());
+  const liberados = formData.get("certificados_liberados") === "on" ? "1" : "0";
+  const jaLiberado = (await getConfig("certificados_liberados", "0")) === "1";
+  await setConfig("certificados_liberados", liberados);
+  if (liberados === "1" && !jaLiberado) {
+    await registrarAcao(s.id, "certificados_liberados");
+  }
   await registrarAcao(s.id, "configuracoes_salvas");
   revalidatePath("/diretoria");
   redirect("/diretoria?ok=1");

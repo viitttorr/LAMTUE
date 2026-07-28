@@ -6,6 +6,7 @@ export default async function CertificadoPage() {
   const freq = await frequenciaDe(s.id);
   const horas = freq.presentes * Number(await getConfig("horas_por_aula", "2"));
   const periodo = await getConfig("periodo_atual", "2026");
+  const liberado = (await getConfig("certificados_liberados", "0")) === "1";
 
   return (
     <>
@@ -24,15 +25,22 @@ export default async function CertificadoPage() {
         </div>
         <div className="mt-2">
           {freq.elegivel ? (
-            <>
-              <div className="alert alert-green">
-                Você está elegível! Seu certificado do período {periodo} inclui nome, carga horária e
-                assinatura referencial da diretoria.
+            liberado ? (
+              <>
+                <div className="alert alert-green">
+                  Você está elegível! Seu certificado do período {periodo} inclui nome, carga horária e
+                  assinatura referencial da diretoria.
+                </div>
+                <a className="btn btn-primary" href="/api/certificado" download>
+                  ⬇ Baixar certificado (PDF)
+                </a>
+              </>
+            ) : (
+              <div className="alert alert-amber">
+                Você atingiu a frequência mínima! A emissão ainda depende da liberação da diretoria —
+                assim que os certificados forem liberados, o botão de download aparece aqui.
               </div>
-              <a className="btn btn-primary" href="/api/certificado" download>
-                ⬇ Baixar certificado (PDF)
-              </a>
-            </>
+            )
           ) : (
             <div className="alert alert-amber">
               {freq.total === 0

@@ -7,13 +7,13 @@ export const dynamic = "force-dynamic";
 
 const ITENS = [
   { href: "/ligante", label: "Painel", icon: "▣" },
+  { href: "/ligante/mural", label: "Mural", icon: "☰" },
   { href: "/ligante/presencas", label: "Presenças", icon: "✓" },
   { href: "/ligante/biblioteca", label: "Biblioteca", icon: "▤" },
   { href: "/ligante/simulados", label: "Simulados", icon: "◎" },
   { href: "/ligante/casos", label: "Casos Clínicos", icon: "✚" },
   { href: "/ligante/trilha", label: "Trilha", icon: "➤" },
   { href: "/ligante/certificado", label: "Certificado", icon: "❖" },
-  { href: "/ligante/mural", label: "Mural", icon: "☰" },
 ];
 
 export default async function LiganteLayout({ children }: { children: React.ReactNode }) {

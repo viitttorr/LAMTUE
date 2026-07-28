@@ -17,6 +17,7 @@ export default async function PainelLigante() {
   const reforco = await temasComMaisErros(s.id);
   const emRisco = freq.total > 0 && freq.pct < 75;
   const periodoAtual = await getConfig("periodo_atual", "2026");
+  const certificadosLiberados = (await getConfig("certificados_liberados", "0")) === "1";
 
   return (
     <>
@@ -39,8 +40,8 @@ export default async function PainelLigante() {
           <div className={`progress mt-2 ${freq.elegivel || freq.total === 0 ? "green" : ""}`}><span style={{ width: `${freq.pct}%` }} /></div>
         </div>
         <div className="card stat hoverable">
-          <div className="stat-num" style={{ fontSize: 21, color: freq.elegivel ? "var(--green)" : "var(--amber)" }}>
-            {freq.total === 0 ? "Aguardando aulas" : freq.elegivel ? "Elegível ✓" : "Em construção"}
+          <div className="stat-num" style={{ fontSize: 21, color: freq.elegivel && certificadosLiberados ? "var(--green)" : "var(--amber)" }}>
+            {freq.total === 0 ? "Aguardando aulas" : !freq.elegivel ? "Em construção" : certificadosLiberados ? "Elegível ✓" : "Aguardando liberação"}
           </div>
           <div className="stat-label">Status de certificação</div>
           <Link href="/ligante/certificado" className="small mt-2" style={{ display: "inline-block", color: "var(--blue)" }}>Ver certificado →</Link>

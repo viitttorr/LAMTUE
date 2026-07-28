@@ -19,6 +19,7 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
   const periodoAtual = await getConfig("periodo_atual", "2026/2");
   const horasPorAula = await getConfig("horas_por_aula", "2");
   const emailContato = await getConfig("email_contato", "");
+  const certificadosLiberados = (await getConfig("certificados_liberados", "0")) === "1";
   const ultimasAcoes = (await db().prepare(
     "SELECT a.acao, a.detalhes, a.criado_em, u.nome FROM audit_log a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.id DESC LIMIT 8"
   ).all()) as { acao: string; detalhes: string | null; criado_em: string; nome: string | null }[];
@@ -98,6 +99,18 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
               </div>
               <label className="label">E-mail de contato da liga</label>
               <input className="input" type="email" name="email_contato" defaultValue={emailContato} placeholder="lamtue@..." />
+              <label className="flex mt-2" style={{ gap: 8 }}>
+                <input
+                  type="checkbox"
+                  name="certificados_liberados"
+                  defaultChecked={certificadosLiberados}
+                  style={{ width: 17, height: 17, accentColor: "#a01d43" }}
+                />
+                <span style={{ fontSize: 14 }}>
+                  Certificados liberados para download {certificadosLiberados ? <span className="badge badge-green" style={{ marginLeft: 4 }}>ativos</span> : <span className="badge badge-amber" style={{ marginLeft: 4 }}>bloqueados</span>}
+                </span>
+              </label>
+              <p className="small mt-1">Enquanto desmarcado, ligantes elegíveis veem o status mas não podem baixar o PDF.</p>
               <button className="btn btn-sm mt-2" type="submit">Salvar</button>
             </form>
           </div>

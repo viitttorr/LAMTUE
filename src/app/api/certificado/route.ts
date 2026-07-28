@@ -10,6 +10,8 @@ export async function GET() {
   if (!s) return new Response("Acesso negado", { status: 403 });
   const freq = await frequenciaDe(s.id);
   if (!freq.elegivel) return new Response("Frequência mínima de 2/3 não atingida.", { status: 403 });
+  const liberado = (await getConfig("certificados_liberados", "0")) === "1";
+  if (!liberado) return new Response("Certificados ainda não foram liberados pela diretoria.", { status: 403 });
 
   const horas = freq.presentes * Number(await getConfig("horas_por_aula", "2"));
   const periodo = await getConfig("periodo_atual", "2026");
