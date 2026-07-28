@@ -6,7 +6,7 @@ import CasoPlayer from "@/components/CasoPlayer";
 export default async function CasoInterativoPage({ params }: { params: Promise<{ id: string }> }) {
   await exigirLigante();
   const { id } = await params;
-  const caso = db().prepare("SELECT * FROM casos WHERE id = ?").get(Number(id)) as
+  const caso = (await db().prepare("SELECT * FROM casos WHERE id = ?").get(Number(id))) as
     | { id: number; titulo: string; tema: string; contexto: string; etapas: string } | undefined;
   if (!caso) notFound();
 

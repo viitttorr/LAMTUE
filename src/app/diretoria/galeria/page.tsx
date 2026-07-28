@@ -8,12 +8,12 @@ import { criarAlbum } from "@/app/actions/diretoria";
 export default async function GaleriaAdminPage({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
   await exigirGaleria();
   const { erro } = await searchParams;
-  const albuns = db().prepare(
+  const albuns = (await db().prepare(
     `SELECT a.id, a.titulo, a.data, a.visibilidade,
             (SELECT COUNT(*) FROM galeria_fotos f WHERE f.album_id = a.id) AS total_fotos,
             (SELECT f.arquivo_id FROM galeria_fotos f WHERE f.album_id = a.id ORDER BY f.id ASC LIMIT 1) AS capa_id
      FROM galeria_albuns a ORDER BY a.id DESC`
-  ).all() as { id: number; titulo: string; data: string | null; visibilidade: string; total_fotos: number; capa_id: number | null }[];
+  ).all()) as { id: number; titulo: string; data: string | null; visibilidade: string; total_fotos: number; capa_id: number | null }[];
 
   return (
     <>

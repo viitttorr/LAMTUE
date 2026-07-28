@@ -10,7 +10,7 @@ export default async function SimuladoPage({ params, searchParams }: { params: P
   const s = await exigirLigante();
   const { id } = await params;
   const { origem } = await searchParams;
-  const sim = db().prepare("SELECT * FROM simulados WHERE id = ? AND user_id = ?").get(Number(id), s.id) as
+  const sim = (await db().prepare("SELECT * FROM simulados WHERE id = ? AND user_id = ?").get(Number(id), s.id)) as
     | { id: number; tema: string; dificuldade: string; questoes: string; respostas: string | null; score: number | null; finalizado_em: string | null }
     | undefined;
   if (!sim) notFound();

@@ -10,14 +10,14 @@ export const dynamic = "force-dynamic";
 export default async function GaleriaPage() {
   const sessao = await getSessao();
   const filtro = sessao ? "" : "WHERE a.visibilidade = 'publico'";
-  const albuns = db().prepare(
+  const albuns = (await db().prepare(
     `SELECT a.id, a.titulo, a.descricao, a.data, a.visibilidade,
             (SELECT COUNT(*) FROM galeria_fotos f WHERE f.album_id = a.id) AS total_fotos,
             (SELECT f.arquivo_id FROM galeria_fotos f WHERE f.album_id = a.id ORDER BY f.id ASC LIMIT 1) AS capa_id
      FROM galeria_albuns a
      ${filtro}
      ORDER BY a.data DESC, a.id DESC`
-  ).all() as {
+  ).all()) as {
     id: number; titulo: string; descricao: string | null; data: string | null;
     visibilidade: string; total_fotos: number; capa_id: number | null;
   }[];

@@ -8,12 +8,12 @@ export default async function FinanceiroPage() {
   const s = await exigirDiretoria();
   if (!podeVerFinanceiro(s)) redirect("/diretoria");
 
-  const lancamentos = db().prepare("SELECT * FROM financeiro ORDER BY data DESC, id DESC").all() as
+  const lancamentos = (await db().prepare("SELECT * FROM financeiro ORDER BY data DESC, id DESC").all()) as
     { id: number; tipo: string; descricao: string; valor_centavos: number; data: string }[];
   const entradas = lancamentos.filter((l) => l.tipo === "entrada").reduce((a, l) => a + l.valor_centavos, 0);
   const saidas = lancamentos.filter((l) => l.tipo === "saida").reduce((a, l) => a + l.valor_centavos, 0);
-  const inscricoesPagas = (db().prepare("SELECT COUNT(*) AS n FROM inscricoes WHERE comprovante_id IS NOT NULL").get() as { n: number }).n;
-  const taxa = (db().prepare("SELECT taxa_centavos FROM seletivo WHERE id=1").get() as { taxa_centavos: number }).taxa_centavos;
+  const inscricoesPagas = ((await db().prepare("SELECT COUNT(*) AS n FROM inscricoes WHERE comprovante_id IS NOT NULL").get()) as { n: number }).n;
+  const taxa = ((await db().prepare("SELECT taxa_centavos FROM seletivo WHERE id=1").get()) as { taxa_centavos: number }).taxa_centavos;
 
   return (
     <>

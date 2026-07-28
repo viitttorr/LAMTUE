@@ -17,14 +17,14 @@ const AREAS = [
   { t: "Extensão", d: "Ações junto à comunidade: capacitações em primeiros socorros, campanhas de prevenção e presença em eventos da universidade e da cidade.", i: "❖" },
 ];
 
-export default function Home() {
-  const seletivo = db().prepare("SELECT * FROM seletivo WHERE id = 1").get() as {
+export default async function Home() {
+  const seletivo = (await db().prepare("SELECT * FROM seletivo WHERE id = 1").get()) as {
     ativo: number; vagas: number; prazo: string | null;
   };
-  const inscritos = (db().prepare("SELECT COUNT(*) AS n FROM inscricoes").get() as { n: number }).n;
-  const ligantes = (db().prepare("SELECT COUNT(*) AS n FROM users WHERE role='ligante' AND ativo=1").get() as { n: number }).n;
-  const aulas = (db().prepare("SELECT COUNT(*) AS n FROM aulas").get() as { n: number }).n;
-  const acoes = (db().prepare("SELECT COUNT(*) AS n FROM extensao WHERE tipo='acao'").get() as { n: number }).n;
+  const inscritos = ((await db().prepare("SELECT COUNT(*) AS n FROM inscricoes").get()) as { n: number }).n;
+  const ligantes = ((await db().prepare("SELECT COUNT(*) AS n FROM users WHERE role='ligante' AND ativo=1").get()) as { n: number }).n;
+  const aulas = ((await db().prepare("SELECT COUNT(*) AS n FROM aulas").get()) as { n: number }).n;
+  const acoes = ((await db().prepare("SELECT COUNT(*) AS n FROM extensao WHERE tipo='acao'").get()) as { n: number }).n;
 
   const capitulos = [
     { id: "inicio", label: "Início" },

@@ -15,12 +15,12 @@ export default async function AlbumAdminPage({
   const { id } = await params;
   const { erro } = await searchParams;
   const albumId = Number(id);
-  const album = db().prepare("SELECT * FROM galeria_albuns WHERE id = ?").get(albumId) as
+  const album = (await db().prepare("SELECT * FROM galeria_albuns WHERE id = ?").get(albumId)) as
     | { id: number; titulo: string; visibilidade: string }
     | undefined;
   if (!album) notFound();
 
-  const fotos = db().prepare("SELECT id, arquivo_id, legenda FROM galeria_fotos WHERE album_id = ? ORDER BY id ASC").all(albumId) as
+  const fotos = (await db().prepare("SELECT id, arquivo_id, legenda FROM galeria_fotos WHERE album_id = ? ORDER BY id ASC").all(albumId)) as
     { id: number; arquivo_id: number; legenda: string | null }[];
 
   return (

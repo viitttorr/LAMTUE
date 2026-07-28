@@ -107,7 +107,7 @@ export async function enviarWhatsApp(telefone: string, corpo: string, evento: st
       status = `erro: ${e instanceof Error ? e.message : String(e)}`;
     }
   }
-  db().prepare(
+  await db().prepare(
     "INSERT INTO mensagens (canal, destinatario, assunto, corpo, evento, status) VALUES ('whatsapp', ?, NULL, ?, ?, ?)"
   ).run(telefone, corpo, evento, status);
   return status;

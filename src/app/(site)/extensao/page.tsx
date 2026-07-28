@@ -5,10 +5,10 @@ import PageHeader from "@/components/PageHeader";
 
 export const dynamic = "force-dynamic";
 
-export default function ExtensaoPage() {
-  const acoes = db().prepare("SELECT * FROM extensao WHERE tipo='acao' ORDER BY data DESC, id DESC").all() as
+export default async function ExtensaoPage() {
+  const acoes = (await db().prepare("SELECT * FROM extensao WHERE tipo='acao' ORDER BY data DESC, id DESC").all()) as
     { id: number; titulo: string; descricao: string; data: string | null; link: string | null; arquivo_id: number | null }[];
-  const materiais = db().prepare("SELECT * FROM extensao WHERE tipo='material' ORDER BY id DESC").all() as typeof acoes;
+  const materiais = (await db().prepare("SELECT * FROM extensao WHERE tipo='material' ORDER BY id DESC").all()) as typeof acoes;
 
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>

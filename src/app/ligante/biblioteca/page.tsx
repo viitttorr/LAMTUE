@@ -5,7 +5,7 @@ const ICONES: Record<string, string> = { slide: "▤", pdf: "▨", video: "▶",
 
 export default async function BibliotecaPage() {
   await exigirLigante();
-  const materiais = db().prepare("SELECT * FROM materiais ORDER BY tema, id DESC").all() as
+  const materiais = (await db().prepare("SELECT * FROM materiais ORDER BY tema, id DESC").all()) as
     { id: number; titulo: string; tema: string; tipo: string; url: string | null; arquivo_id: number | null; visibilidade: string }[];
 
   const porTema = new Map<string, typeof materiais>();

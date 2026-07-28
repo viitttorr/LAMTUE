@@ -4,12 +4,12 @@ import { fmtData } from "@/lib/util";
 
 export default async function PresencasPage() {
   const s = await exigirLigante();
-  const freq = frequenciaDe(s.id);
-  const rows = db().prepare(
+  const freq = await frequenciaDe(s.id);
+  const rows = (await db().prepare(
     `SELECT a.titulo, a.tema, a.data, p.presente, p.registrado_em
      FROM presencas p JOIN aulas a ON a.id = p.aula_id
      WHERE p.user_id = ? ORDER BY a.data DESC`
-  ).all(s.id) as { titulo: string; tema: string | null; data: string; presente: number; registrado_em: string }[];
+  ).all(s.id)) as { titulo: string; tema: string | null; data: string; presente: number; registrado_em: string }[];
 
   // agrupa por semestre (AAAA/1 ou AAAA/2)
   const porSemestre = new Map<string, typeof rows>();

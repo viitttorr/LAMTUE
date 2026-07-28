@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 async function inscrever(formData: FormData) {
   "use server";
-  const sel = db().prepare("SELECT ativo, prazo FROM seletivo WHERE id=1").get() as { ativo: number; prazo: string | null };
+  const sel = (await db().prepare("SELECT ativo, prazo FROM seletivo WHERE id=1").get()) as { ativo: number; prazo: string | null };
   if (!sel.ativo) redirect("/seletivo?erro=" + encodeURIComponent("O processo seletivo não está aberto."));
   if (sel.prazo && new Date(sel.prazo + "T23:59:59") < new Date())
     redirect("/seletivo?erro=" + encodeURIComponent("O prazo de inscrição já encerrou."));
@@ -32,10 +32,10 @@ async function inscrever(formData: FormData) {
     redirect("/seletivo?erro=" + encodeURIComponent(e instanceof Error ? e.message : "Falha no upload."));
   }
 
-  const dup = db().prepare("SELECT id FROM inscricoes WHERE matricula = ? OR email = ?").get(matricula, email);
+  const dup = await db().prepare("SELECT id FROM inscricoes WHERE matricula = ? OR email = ?").get(matricula, email);
   if (dup) redirect("/seletivo?erro=" + encodeURIComponent("Já existe uma inscrição com esta matrícula ou e-mail."));
 
-  db().prepare(
+  await db().prepare(
     "INSERT INTO inscricoes (nome, matricula, semestre, email, telefone, comprovante_id) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(nome, matricula, semestre, email, telefone, comprovanteId);
 
@@ -50,10 +50,10 @@ async function inscrever(formData: FormData) {
 
 export default async function SeletivoPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   const { ok, erro } = await searchParams;
-  const sel = db().prepare("SELECT * FROM seletivo WHERE id = 1").get() as {
+  const sel = (await db().prepare("SELECT * FROM seletivo WHERE id = 1").get()) as {
     ativo: number; vagas: number; prazo: string | null; taxa_centavos: number; edital: string | null; cronograma: string | null;
   };
-  const inscritos = (db().prepare("SELECT COUNT(*) AS n FROM inscricoes").get() as { n: number }).n;
+  const inscritos = ((await db().prepare("SELECT COUNT(*) AS n FROM inscricoes").get()) as { n: number }).n;
   const cronograma: { etapa: string; data: string }[] = sel.cronograma ? JSON.parse(sel.cronograma) : [];
   const encerrado = sel.prazo ? new Date(sel.prazo + "T23:59:59") < new Date() : false;
 

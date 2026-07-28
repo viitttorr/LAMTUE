@@ -13,7 +13,7 @@ async function enviarContato(formData: FormData) {
   const whatsapp = String(formData.get("whatsapp") || "").trim();
   const mensagem = String(formData.get("mensagem") || "").trim();
   if (!nome || !email || !mensagem) redirect("/contato?erro=1");
-  const destino = getConfig("email_contato", "lamtue.uri@gmail.com");
+  const destino = await getConfig("email_contato", "lamtue.uri@gmail.com");
   const contatoLinha = whatsapp ? `\nWhatsApp: ${whatsapp}` : "";
   await enviarEmail(destino, `Contato pelo portal — ${nome}`, `De: ${nome} <${email}>${contatoLinha}\n\n${mensagem}`, "contato");
   redirect("/contato?ok=1");
@@ -21,6 +21,7 @@ async function enviarContato(formData: FormData) {
 
 export default async function ContatoPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   const { ok, erro } = await searchParams;
+  const emailContato = await getConfig("email_contato", "lamtue.uri@gmail.com");
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>
       <div className="page-panel">
@@ -32,7 +33,7 @@ export default async function ContatoPage({ searchParams }: { searchParams: Prom
               <div style={{ display: "grid", gap: 12, fontSize: 14.5 }}>
                 <div><div className="small">Universidade</div>URI — Campus Erechim/RS · Curso de Medicina</div>
                 <div><div className="small">Vínculo</div>CAMED — Centro Acadêmico de Medicina</div>
-                <div><div className="small">E-mail</div>{getConfig("email_contato", "lamtue.uri@gmail.com")}</div>
+                <div><div className="small">E-mail</div>{emailContato}</div>
                 <div><div className="small">Instagram</div>@lamtue.uri</div>
               </div>
             </div>

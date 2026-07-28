@@ -7,12 +7,12 @@ import Link from "next/link";
 export default async function FrequenciaPage({ searchParams }: { searchParams: Promise<{ aula?: string; ok?: string }> }) {
   await exigirDiretoria();
   const { aula: aulaParam, ok } = await searchParams;
-  const aulas = db().prepare("SELECT id, titulo, data FROM aulas ORDER BY data DESC").all() as { id: number; titulo: string; data: string }[];
+  const aulas = (await db().prepare("SELECT id, titulo, data FROM aulas ORDER BY data DESC").all()) as { id: number; titulo: string; data: string }[];
   const aulaId = Number(aulaParam) || aulas[0]?.id;
-  const ligantes = db().prepare("SELECT id, nome, matricula FROM users WHERE role='ligante' AND ativo=1 ORDER BY nome").all() as
+  const ligantes = (await db().prepare("SELECT id, nome, matricula FROM users WHERE role='ligante' AND ativo=1 ORDER BY nome").all()) as
     { id: number; nome: string; matricula: string | null }[];
   const marcadas = aulaId
-    ? new Map((db().prepare("SELECT user_id, presente FROM presencas WHERE aula_id = ?").all(aulaId) as { user_id: number; presente: number }[]).map((p) => [p.user_id, p.presente]))
+    ? new Map(((await db().prepare("SELECT user_id, presente FROM presencas WHERE aula_id = ?").all(aulaId)) as { user_id: number; presente: number }[]).map((p) => [p.user_id, p.presente]))
     : new Map<number, number>();
   const jaTemChamada = marcadas.size > 0;
 

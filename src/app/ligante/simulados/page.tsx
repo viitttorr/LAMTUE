@@ -7,9 +7,9 @@ import Link from "next/link";
 export default async function SimuladosPage({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
   const s = await exigirLigante();
   const { erro } = await searchParams;
-  const historico = db().prepare(
+  const historico = (await db().prepare(
     "SELECT id, tema, dificuldade, score, criado_em, finalizado_em FROM simulados WHERE user_id = ? ORDER BY id DESC LIMIT 30"
-  ).all(s.id) as { id: number; tema: string; dificuldade: string; score: number | null; criado_em: string; finalizado_em: string | null }[];
+  ).all(s.id)) as { id: number; tema: string; dificuldade: string; score: number | null; criado_em: string; finalizado_em: string | null }[];
   const temIA = !!process.env.ANTHROPIC_API_KEY;
 
   return (

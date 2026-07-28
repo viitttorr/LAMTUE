@@ -10,9 +10,9 @@ export async function login(formData: FormData) {
   const senha = String(formData.get("senha") || "");
   if (!identificador || !senha) redirect("/login?erro=" + encodeURIComponent("Informe suas credenciais."));
 
-  const user = db()
+  const user = (await db()
     .prepare("SELECT id, senha_hash, role, ativo, must_change_password FROM users WHERE lower(email) = ? OR lower(matricula) = ?")
-    .get(identificador, identificador) as
+    .get(identificador, identificador)) as
     | { id: number; senha_hash: string; role: string; ativo: number; must_change_password: number }
     | undefined;
 
@@ -22,7 +22,7 @@ export async function login(formData: FormData) {
     redirect("/login?erro=" + encodeURIComponent("Seu acesso está desativado. Fale com a diretoria."));
 
   await setSessionCookie(user.id);
-  registrarAcao(user.id, "login");
+  await registrarAcao(user.id, "login");
   if (user.must_change_password) redirect("/trocar-senha");
   redirect(user.role === "diretoria" ? "/diretoria" : user.role === "candidato" ? "/candidato" : "/ligante");
 }
@@ -36,12 +36,12 @@ export async function trocarSenha(formData: FormData) {
   if (nova.length < 8) redirect("/trocar-senha?erro=" + encodeURIComponent("A nova senha deve ter ao menos 8 caracteres."));
   if (nova !== confirma) redirect("/trocar-senha?erro=" + encodeURIComponent("A confirmação não confere."));
 
-  const row = db().prepare("SELECT senha_hash FROM users WHERE id = ?").get(s.id) as { senha_hash: string };
+  const row = (await db().prepare("SELECT senha_hash FROM users WHERE id = ?").get(s.id)) as { senha_hash: string };
   if (!bcrypt.compareSync(atual, row.senha_hash))
     redirect("/trocar-senha?erro=" + encodeURIComponent("Senha atual incorreta."));
 
-  db().prepare("UPDATE users SET senha_hash = ?, must_change_password = 0 WHERE id = ?").run(bcrypt.hashSync(nova, 10), s.id);
-  registrarAcao(s.id, "troca_senha");
+  await db().prepare("UPDATE users SET senha_hash = ?, must_change_password = 0 WHERE id = ?").run(bcrypt.hashSync(nova, 10), s.id);
+  await registrarAcao(s.id, "troca_senha");
   redirect(s.role === "diretoria" ? "/diretoria" : s.role === "candidato" ? "/candidato" : "/ligante");
 }
 

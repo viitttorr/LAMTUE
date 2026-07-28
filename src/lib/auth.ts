@@ -49,9 +49,9 @@ export async function getSessao(): Promise<Sessao | null> {
   if (expected.length !== got.length || !timingSafeEqual(expected, got)) return null;
   // sessões expiram em 14 dias
   if (Date.now() - Number(parts[1]) > 14 * 24 * 60 * 60 * 1000) return null;
-  const user = db()
+  const user = (await db()
     .prepare("SELECT id, nome, role, cargo, ativo, must_change_password FROM users WHERE id = ?")
-    .get(Number(parts[0])) as
+    .get(Number(parts[0]))) as
     | { id: number; nome: string; role: "ligante" | "diretoria" | "candidato"; cargo: string | null; ativo: number; must_change_password: number }
     | undefined;
   if (!user || !user.ativo) return null;

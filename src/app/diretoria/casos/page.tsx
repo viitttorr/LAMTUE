@@ -16,9 +16,9 @@ const EXEMPLO = `? Qual a primeira conduta na avaliação primária?
 export default async function CasosAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   await exigirDiretoria();
   const { ok, erro } = await searchParams;
-  const casos = db().prepare(
+  const casos = (await db().prepare(
     `SELECT c.*, (SELECT COUNT(*) FROM casos_resultados r WHERE r.caso_id = c.id) AS execucoes FROM casos c ORDER BY c.id DESC`
-  ).all() as { id: number; titulo: string; tema: string; contexto: string; etapas: string; visibilidade: string; execucoes: number }[];
+  ).all()) as { id: number; titulo: string; tema: string; contexto: string; etapas: string; visibilidade: string; execucoes: number }[];
 
   return (
     <>

@@ -7,14 +7,17 @@ import RoleCargoFields from "@/components/RoleCargoFields";
 export default async function LigantesPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   await exigirDiretoria();
   const { ok, erro } = await searchParams;
-  const periodoAtual = getConfig("periodo_atual", "2026/2");
-  const membros = db().prepare(
+  const periodoAtual = await getConfig("periodo_atual", "2026/2");
+  const membros = (await db().prepare(
     "SELECT id, nome, matricula, email, telefone, semestre, turma, role, cargo, ativo, must_change_password FROM users WHERE role IN ('ligante','diretoria') ORDER BY role, nome"
-  ).all() as {
+  ).all()) as {
     id: number; nome: string; matricula: string | null; email: string | null; telefone: string | null;
     semestre: string | null; turma: string | null; role: "ligante" | "diretoria"; cargo: string | null;
     ativo: number; must_change_password: number;
   }[];
+  const frequencias = new Map(
+    await Promise.all(membros.filter((m) => m.role === "ligante").map(async (m) => [m.id, await frequenciaDe(m.id)] as const))
+  );
 
   return (
     <>
@@ -60,7 +63,7 @@ export default async function LigantesPage({ searchParams }: { searchParams: Pro
           <tbody>
             {membros.length === 0 && <tr><td colSpan={9} className="muted">Nenhuma conta cadastrada ainda.</td></tr>}
             {membros.map((m) => {
-              const f = m.role === "ligante" ? frequenciaDe(m.id) : null;
+              const f = frequencias.get(m.id) ?? null;
               return (
                 <tr key={m.id} style={{ opacity: m.ativo ? 1 : 0.5 }}>
                   <td>

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AlbumPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const album = db().prepare("SELECT * FROM galeria_albuns WHERE id = ?").get(Number(id)) as
+  const album = (await db().prepare("SELECT * FROM galeria_albuns WHERE id = ?").get(Number(id))) as
     | { id: number; titulo: string; descricao: string | null; data: string | null; visibilidade: string }
     | undefined;
   if (!album) notFound();
@@ -18,7 +18,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ id: stri
   const sessao = await getSessao();
   if (album.visibilidade === "ligantes" && !sessao) redirect("/login?destino=galeria");
 
-  const fotos = db().prepare("SELECT id, arquivo_id, legenda FROM galeria_fotos WHERE album_id = ? ORDER BY id ASC").all(album.id) as
+  const fotos = (await db().prepare("SELECT id, arquivo_id, legenda FROM galeria_fotos WHERE album_id = ? ORDER BY id ASC").all(album.id)) as
     { id: number; arquivo_id: number; legenda: string | null }[];
 
   return (

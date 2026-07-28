@@ -8,19 +8,20 @@ import ECGLine from "@/components/ECGLine";
 
 export default async function PainelLigante() {
   const s = await exigirLigante();
-  const freq = frequenciaDe(s.id);
-  const proxAula = db().prepare("SELECT titulo, data, local FROM aulas WHERE data >= date('now') ORDER BY data ASC LIMIT 1").get() as
+  const freq = await frequenciaDe(s.id);
+  const proxAula = (await db().prepare("SELECT titulo, data, local FROM aulas WHERE data >= date('now') ORDER BY data ASC LIMIT 1").get()) as
     | { titulo: string; data: string; local: string | null } | undefined;
-  const avisos = db().prepare("SELECT a.titulo, a.mensagem, a.criado_em, u.nome AS autor FROM avisos a LEFT JOIN users u ON u.id = a.autor_id ORDER BY a.id DESC LIMIT 3").all() as
+  const avisos = (await db().prepare("SELECT a.titulo, a.mensagem, a.criado_em, u.nome AS autor FROM avisos a LEFT JOIN users u ON u.id = a.autor_id ORDER BY a.id DESC LIMIT 3").all()) as
     { titulo: string; mensagem: string; criado_em: string; autor: string | null }[];
-  const simulados = db().prepare("SELECT COUNT(*) AS n, AVG(score) AS media FROM simulados WHERE user_id = ? AND score IS NOT NULL").get(s.id) as { n: number; media: number | null };
-  const reforco = temasComMaisErros(s.id);
+  const simulados = (await db().prepare("SELECT COUNT(*) AS n, AVG(score) AS media FROM simulados WHERE user_id = ? AND score IS NOT NULL").get(s.id)) as { n: number; media: number | null };
+  const reforco = await temasComMaisErros(s.id);
   const emRisco = freq.total > 0 && freq.pct < 75;
+  const periodoAtual = await getConfig("periodo_atual", "2026");
 
   return (
     <>
       <h1 className="page-title">Olá, {s.nome.split(" ")[0]}</h1>
-      <p className="page-sub">Seu painel na LAMTUE — período {getConfig("periodo_atual", "2026")}</p>
+      <p className="page-sub">Seu painel na LAMTUE — período {periodoAtual}</p>
 
       {emRisco && (
         <div className="alert alert-red">

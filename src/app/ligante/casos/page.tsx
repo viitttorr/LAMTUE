@@ -4,11 +4,11 @@ import Link from "next/link";
 
 export default async function CasosLigantePage() {
   const s = await exigirLigante();
-  const casos = db().prepare("SELECT id, titulo, tema, contexto, visibilidade FROM casos ORDER BY id DESC").all() as
+  const casos = (await db().prepare("SELECT id, titulo, tema, contexto, visibilidade FROM casos ORDER BY id DESC").all()) as
     { id: number; titulo: string; tema: string; contexto: string; visibilidade: string }[];
-  const feitos = db().prepare(
+  const feitos = (await db().prepare(
     "SELECT caso_id, MAX(acertos * 100.0 / total) AS melhor FROM casos_resultados WHERE user_id = ? GROUP BY caso_id"
-  ).all(s.id) as { caso_id: number; melhor: number }[];
+  ).all(s.id)) as { caso_id: number; melhor: number }[];
   const melhorPor = new Map(feitos.map((f) => [f.caso_id, Math.round(f.melhor)]));
 
   return (

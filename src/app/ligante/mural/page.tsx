@@ -4,9 +4,9 @@ import { fmtData } from "@/lib/util";
 
 export default async function MuralPage() {
   await exigirLigante();
-  const avisos = db().prepare(
+  const avisos = (await db().prepare(
     "SELECT a.*, u.nome AS autor FROM avisos a LEFT JOIN users u ON u.id = a.autor_id ORDER BY a.id DESC"
-  ).all() as { id: number; titulo: string; mensagem: string; criado_em: string; autor: string | null }[];
+  ).all()) as { id: number; titulo: string; mensagem: string; criado_em: string; autor: string | null }[];
 
   return (
     <>

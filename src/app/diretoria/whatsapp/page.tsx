@@ -1,9 +1,22 @@
 import { exigirDiretoria } from "@/lib/auth";
-import { waStatus } from "@/lib/whatsapp";
 import { conectarWhatsApp, desconectarWhatsApp } from "@/app/actions/diretoria";
 
 export default async function WhatsAppPage() {
   await exigirDiretoria();
+
+  if (process.env.RUNTIME === "cloudflare") {
+    return (
+      <>
+        <h1 className="page-title">Conexão WhatsApp</h1>
+        <div className="alert alert-amber" style={{ maxWidth: 560 }}>
+          Indisponível nesta versão publicada. A conexão WhatsApp depende de uma sessão persistente que o
+          Cloudflare Workers não suporta. Notificações continuam sendo enviadas por e-mail normalmente.
+        </div>
+      </>
+    );
+  }
+
+  const { waStatus } = await import("@/lib/whatsapp");
   const wa = waStatus();
 
   return (

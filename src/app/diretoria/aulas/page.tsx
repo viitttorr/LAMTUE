@@ -7,11 +7,11 @@ import TemaSelect from "@/components/TemaSelect";
 
 export default async function AulasPage() {
   await exigirDiretoria();
-  const aulas = db().prepare(
+  const aulas = (await db().prepare(
     `SELECT a.*, (SELECT COUNT(*) FROM materiais m WHERE m.aula_id = a.id) AS materiais,
      (SELECT COUNT(*) FROM presencas p WHERE p.aula_id = a.id AND p.presente = 1) AS presentes
      FROM aulas a ORDER BY a.data DESC`
-  ).all() as { id: number; titulo: string; tema: string | null; data: string; local: string | null; descricao: string | null; materiais: number; presentes: number }[];
+  ).all()) as { id: number; titulo: string; tema: string | null; data: string; local: string | null; descricao: string | null; materiais: number; presentes: number }[];
 
   return (
     <>

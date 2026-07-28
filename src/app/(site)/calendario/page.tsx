@@ -5,10 +5,10 @@ import PageHeader from "@/components/PageHeader";
 
 export const dynamic = "force-dynamic";
 
-export default function CalendarioPage() {
-  const aulas = db().prepare("SELECT titulo, tema, data, local, 'Aula' AS tipo FROM aulas").all() as
+export default async function CalendarioPage() {
+  const aulas = (await db().prepare("SELECT titulo, tema, data, local, 'Aula' AS tipo FROM aulas").all()) as
     { titulo: string; tema: string | null; data: string; local: string | null; tipo: string }[];
-  const eventos = db().prepare("SELECT titulo, tipo, data, local, NULL AS tema FROM eventos").all() as
+  const eventos = (await db().prepare("SELECT titulo, tipo, data, local, NULL AS tema FROM eventos").all()) as
     { titulo: string; tema: string | null; data: string; local: string | null; tipo: string }[];
   const tudo = [...aulas, ...eventos].sort((a, b) => a.data.localeCompare(b.data));
   const futuros = tudo.filter((e) => e.data >= new Date().toISOString().slice(0, 10));

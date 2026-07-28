@@ -12,9 +12,9 @@ const RELATORIOS = [
 
 export default async function RelatoriosPage() {
   await exigirDiretoria();
-  const auditoria = db().prepare(
+  const auditoria = (await db().prepare(
     "SELECT a.acao, a.detalhes, a.criado_em, u.nome FROM audit_log a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.id DESC LIMIT 40"
-  ).all() as { acao: string; detalhes: string | null; criado_em: string; nome: string | null }[];
+  ).all()) as { acao: string; detalhes: string | null; criado_em: string; nome: string | null }[];
 
   return (
     <>

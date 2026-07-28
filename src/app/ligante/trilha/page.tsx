@@ -7,12 +7,12 @@ import Link from "next/link";
 export default async function TrilhaPage() {
   const s = await exigirLigante();
   const concluidos = new Set(
-    (db().prepare("SELECT tema FROM trilha_progresso WHERE user_id = ?").all(s.id) as { tema: string }[]).map((r) => r.tema)
+    ((await db().prepare("SELECT tema FROM trilha_progresso WHERE user_id = ?").all(s.id)) as { tema: string }[]).map((r) => r.tema)
   );
   const materiaisPorTema = new Map(
-    (db().prepare("SELECT tema, COUNT(*) AS n FROM materiais GROUP BY tema").all() as { tema: string; n: number }[]).map((r) => [r.tema, r.n])
+    ((await db().prepare("SELECT tema, COUNT(*) AS n FROM materiais GROUP BY tema").all()) as { tema: string; n: number }[]).map((r) => [r.tema, r.n])
   );
-  const reforco = new Set(temasComMaisErros(s.id).map((r) => r.tema));
+  const reforco = new Set((await temasComMaisErros(s.id)).map((r) => r.tema));
   const pct = Math.round((concluidos.size / TEMAS.length) * 100);
 
   return (

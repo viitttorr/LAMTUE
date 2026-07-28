@@ -14,12 +14,12 @@ export async function notificar(dest: Destinatario, assunto: string, corpo: stri
 export async function notificarLigantes(userIds: number[] | "todos", assunto: string, corpo: string, evento: string) {
   let rows: Destinatario[];
   if (userIds === "todos") {
-    rows = db().prepare("SELECT nome, email, telefone FROM users WHERE role='ligante' AND ativo=1").all() as Destinatario[];
+    rows = (await db().prepare("SELECT nome, email, telefone FROM users WHERE role='ligante' AND ativo=1").all()) as Destinatario[];
   } else if (userIds.length === 0) {
     return;
   } else {
     const marks = userIds.map(() => "?").join(",");
-    rows = db().prepare(`SELECT nome, email, telefone FROM users WHERE id IN (${marks}) AND ativo=1`).all(...userIds) as Destinatario[];
+    rows = (await db().prepare(`SELECT nome, email, telefone FROM users WHERE id IN (${marks}) AND ativo=1`).all(...userIds)) as Destinatario[];
   }
   for (const r of rows) await notificar(r, assunto, corpo, evento);
 }

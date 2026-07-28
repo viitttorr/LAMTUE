@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: [
-    "better-sqlite3",
     "pdfkit",
     "@whiskeysockets/baileys",
     "nodemailer",
@@ -14,3 +13,8 @@ const nextConfig = {
 };
 
 export default nextConfig;
+
+// Habilita os bindings reais (D1, R2) no `next dev` local via Miniflare,
+// usando o mesmo wrangler.jsonc do deploy.
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+initOpenNextCloudflareForDev();

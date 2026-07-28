@@ -13,12 +13,12 @@ export function iniciarAgendador() {
   const verificar = async () => {
     try {
       const amanha = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      const aulas = db().prepare("SELECT id, titulo, data, local FROM aulas WHERE data = ?").all(amanha) as
+      const aulas = (await db().prepare("SELECT id, titulo, data, local FROM aulas WHERE data = ?").all(amanha)) as
         { id: number; titulo: string; data: string; local: string | null }[];
       for (const aula of aulas) {
         const chave = `lembrete_enviado_${aula.id}`;
-        if (getConfig(chave)) continue;
-        setConfig(chave, new Date().toISOString());
+        if (await getConfig(chave)) continue;
+        await setConfig(chave, new Date().toISOString());
         await notificarLigantes(
           "todos",
           "Lembrete de aula — LAMTUE",

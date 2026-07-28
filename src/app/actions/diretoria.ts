@@ -21,11 +21,11 @@ export async function salvarAula(formData: FormData) {
   const descricao = String(formData.get("descricao") || "").trim() || null;
   if (!titulo || !data) return;
   if (id) {
-    db().prepare("UPDATE aulas SET titulo=?, tema=?, data=?, local=?, descricao=? WHERE id=?").run(titulo, tema, data, local, descricao, id);
-    registrarAcao(s.id, "aula_editada", `#${id} ${titulo}`);
+    await db().prepare("UPDATE aulas SET titulo=?, tema=?, data=?, local=?, descricao=? WHERE id=?").run(titulo, tema, data, local, descricao, id);
+    await registrarAcao(s.id, "aula_editada", `#${id} ${titulo}`);
   } else {
-    db().prepare("INSERT INTO aulas (titulo, tema, data, local, descricao) VALUES (?,?,?,?,?)").run(titulo, tema, data, local, descricao);
-    registrarAcao(s.id, "aula_criada", titulo);
+    await db().prepare("INSERT INTO aulas (titulo, tema, data, local, descricao) VALUES (?,?,?,?,?)").run(titulo, tema, data, local, descricao);
+    await registrarAcao(s.id, "aula_criada", titulo);
   }
   revalidatePath("/diretoria/aulas");
 }
@@ -33,15 +33,15 @@ export async function salvarAula(formData: FormData) {
 export async function excluirAula(formData: FormData) {
   const s = await exigirDiretoria();
   const id = Number(formData.get("id"));
-  db().prepare("DELETE FROM aulas WHERE id = ?").run(id);
-  registrarAcao(s.id, "aula_excluida", `#${id}`);
+  await db().prepare("DELETE FROM aulas WHERE id = ?").run(id);
+  await registrarAcao(s.id, "aula_excluida", `#${id}`);
   revalidatePath("/diretoria/aulas");
 }
 
 export async function lembrarAula(formData: FormData) {
   const s = await exigirDiretoria();
   const id = Number(formData.get("id"));
-  const aula = db().prepare("SELECT titulo, data, local FROM aulas WHERE id = ?").get(id) as { titulo: string; data: string; local: string | null } | undefined;
+  const aula = (await db().prepare("SELECT titulo, data, local FROM aulas WHERE id = ?").get(id)) as { titulo: string; data: string; local: string | null } | undefined;
   if (!aula) return;
   await notificarLigantes(
     "todos",
@@ -49,7 +49,7 @@ export async function lembrarAula(formData: FormData) {
     `Amanhã tem LAMTUE! 🚑\n\nAula: ${aula.titulo}\nData: ${new Date(aula.data + "T12:00").toLocaleDateString("pt-BR")}${aula.local ? `\nLocal: ${aula.local}` : ""}\n\nSua presença conta para a certificação.`,
     "lembrete_aula"
   );
-  registrarAcao(s.id, "lembrete_aula_enviado", aula.titulo);
+  await registrarAcao(s.id, "lembrete_aula_enviado", aula.titulo);
   revalidatePath("/diretoria/notificacoes");
 }
 
@@ -57,9 +57,9 @@ export async function lembrarAula(formData: FormData) {
 export async function confirmarChamada(formData: FormData) {
   const s = await exigirDiretoria();
   const aulaId = Number(formData.get("aula_id"));
-  const aula = db().prepare("SELECT titulo, data FROM aulas WHERE id = ?").get(aulaId) as { titulo: string; data: string } | undefined;
+  const aula = (await db().prepare("SELECT titulo, data FROM aulas WHERE id = ?").get(aulaId)) as { titulo: string; data: string } | undefined;
   if (!aula) return;
-  const ligantes = db().prepare("SELECT id, nome, email, telefone FROM users WHERE role='ligante' AND ativo=1").all() as
+  const ligantes = (await db().prepare("SELECT id, nome, email, telefone FROM users WHERE role='ligante' AND ativo=1").all()) as
     { id: number; nome: string; email: string | null; telefone: string | null }[];
 
   const upsert = db().prepare(
@@ -68,10 +68,10 @@ export async function confirmarChamada(formData: FormData) {
   const presentes: typeof ligantes = [];
   for (const l of ligantes) {
     const presente = formData.get(`p_${l.id}`) === "on" ? 1 : 0;
-    upsert.run(aulaId, l.id, presente);
+    await upsert.run(aulaId, l.id, presente);
     if (presente) presentes.push(l);
   }
-  registrarAcao(s.id, "chamada_confirmada", `aula #${aulaId} (${aula.titulo}): ${presentes.length}/${ligantes.length} presentes`);
+  await registrarAcao(s.id, "chamada_confirmada", `aula #${aulaId} (${aula.titulo}): ${presentes.length}/${ligantes.length} presentes`);
 
   for (const l of presentes) {
     await notificar(
@@ -98,16 +98,16 @@ export async function salvarMembro(formData: FormData) {
   if (!nome || !matricula) redirect("/diretoria/ligantes?erro=" + encodeURIComponent("Nome e matrícula são obrigatórios."));
   try {
     if (id) {
-      db().prepare(
+      await db().prepare(
         "UPDATE users SET nome=?, matricula=?, email=?, telefone=?, turma=?, role=?, cargo=? WHERE id=? AND role IN ('ligante','diretoria')"
       ).run(nome, matricula, email, telefone, turma, role, cargo, id);
-      registrarAcao(s.id, "membro_editado", `#${id} ${nome}`);
+      await registrarAcao(s.id, "membro_editado", `#${id} ${nome}`);
     } else {
       // credencial temporária = matrícula (troca obrigatória no 1º login)
-      db().prepare(
+      await db().prepare(
         "INSERT INTO users (nome, matricula, email, telefone, turma, cargo, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,?,?,1)"
       ).run(nome, matricula, email, telefone, turma, cargo, bcrypt.hashSync(matricula, 10), role);
-      registrarAcao(s.id, "membro_cadastrado", `${nome} (${matricula}) — ${role}`);
+      await registrarAcao(s.id, "membro_cadastrado", `${nome} (${matricula}) — ${role}`);
     }
   } catch {
     redirect("/diretoria/ligantes?erro=" + encodeURIComponent("Matrícula ou e-mail já cadastrado."));
@@ -132,11 +132,11 @@ export async function importarLigantes(formData: FormData) {
     const [nome, matricula, email, telefone, turma] = cols;
     if (!nome || !matricula) { ignorados++; continue; }
     try {
-      ins.run(nome, matricula, email?.toLowerCase() || null, telefone || null, turma || null, bcrypt.hashSync(matricula, 10));
+      await ins.run(nome, matricula, email?.toLowerCase() || null, telefone || null, turma || null, bcrypt.hashSync(matricula, 10));
       importados++;
     } catch { ignorados++; }
   }
-  registrarAcao(s.id, "ligantes_importados", `${importados} importados, ${ignorados} ignorados`);
+  await registrarAcao(s.id, "ligantes_importados", `${importados} importados, ${ignorados} ignorados`);
   revalidatePath("/diretoria/ligantes");
   redirect("/diretoria/ligantes?ok=" + encodeURIComponent(`${importados} ligante(s) importado(s), ${ignorados} ignorado(s).`));
 }
@@ -144,8 +144,8 @@ export async function importarLigantes(formData: FormData) {
 export async function alternarAtivo(formData: FormData) {
   const s = await exigirDiretoria();
   const id = Number(formData.get("id"));
-  db().prepare("UPDATE users SET ativo = 1 - ativo WHERE id = ? AND role IN ('ligante','diretoria')").run(id);
-  registrarAcao(s.id, "membro_ativado_desativado", `#${id}`);
+  await db().prepare("UPDATE users SET ativo = 1 - ativo WHERE id = ? AND role IN ('ligante','diretoria')").run(id);
+  await registrarAcao(s.id, "membro_ativado_desativado", `#${id}`);
   revalidatePath("/diretoria/ligantes");
 }
 
@@ -166,10 +166,10 @@ export async function salvarMaterial(formData: FormData) {
     redirect("/diretoria/materiais?erro=" + encodeURIComponent(e instanceof Error ? e.message : "Falha no upload."));
   }
   if (!url && !arquivoId) redirect("/diretoria/materiais?erro=" + encodeURIComponent("Informe um link ou envie um arquivo."));
-  db().prepare(
+  await db().prepare(
     "INSERT INTO materiais (titulo, tema, tipo, url, arquivo_id, visibilidade, aula_id) VALUES (?,?,?,?,?,?,?)"
   ).run(titulo, tema, tipo, url, arquivoId, visibilidade, aulaId);
-  registrarAcao(s.id, "material_publicado", `${titulo} (${tema})`);
+  await registrarAcao(s.id, "material_publicado", `${titulo} (${tema})`);
   await notificarLigantes("todos", "Novo material na biblioteca — LAMTUE",
     `Novo material disponível: "${titulo}" (tema: ${tema}). Acesse a biblioteca na área do ligante.`, "novo_material");
   revalidatePath("/diretoria/materiais");
@@ -179,8 +179,8 @@ export async function salvarMaterial(formData: FormData) {
 export async function excluirMaterial(formData: FormData) {
   const s = await exigirDiretoria();
   const id = Number(formData.get("id"));
-  db().prepare("DELETE FROM materiais WHERE id = ?").run(id);
-  registrarAcao(s.id, "material_excluido", `#${id}`);
+  await db().prepare("DELETE FROM materiais WHERE id = ?").run(id);
+  await registrarAcao(s.id, "material_excluido", `#${id}`);
   revalidatePath("/diretoria/materiais");
 }
 
@@ -194,10 +194,10 @@ export async function salvarQuestao(formData: FormData) {
   const correta = Number(formData.get("correta") || 0);
   const comentario = String(formData.get("comentario") || "").trim();
   if (!tema || !enunciado || alternativas.length < 4) return;
-  db().prepare(
+  await db().prepare(
     "INSERT INTO questoes (tema, dificuldade, enunciado, alternativas, correta, comentario, origem, aprovada) VALUES (?,?,?,?,?,?,'manual',1)"
   ).run(tema, dificuldade, enunciado, JSON.stringify(alternativas), correta, comentario);
-  registrarAcao(s.id, "questao_criada", tema);
+  await registrarAcao(s.id, "questao_criada", tema);
   revalidatePath("/diretoria/questoes");
 }
 
@@ -205,9 +205,9 @@ export async function moderarQuestao(formData: FormData) {
   const s = await exigirDiretoria();
   const id = Number(formData.get("id"));
   const acao = String(formData.get("acao"));
-  if (acao === "aprovar") db().prepare("UPDATE questoes SET aprovada = 1 WHERE id = ?").run(id);
-  else db().prepare("DELETE FROM questoes WHERE id = ?").run(id);
-  registrarAcao(s.id, `questao_${acao === "aprovar" ? "aprovada" : "excluida"}`, `#${id}`);
+  if (acao === "aprovar") await db().prepare("UPDATE questoes SET aprovada = 1 WHERE id = ?").run(id);
+  else await db().prepare("DELETE FROM questoes WHERE id = ?").run(id);
+  await registrarAcao(s.id, `questao_${acao === "aprovar" ? "aprovada" : "excluida"}`, `#${id}`);
   revalidatePath("/diretoria/questoes");
 }
 
@@ -240,13 +240,13 @@ export async function salvarCaso(formData: FormData) {
   if (!valido)
     redirect("/diretoria/casos?erro=" + encodeURIComponent("Estrutura de etapas inválida: cada etapa precisa de uma pergunta (linha com ?) e ao menos 2 opções (linhas com * ou -), sendo 1 correta (*)."));
   if (id) {
-    db().prepare("UPDATE casos SET titulo=?, tema=?, contexto=?, etapas=?, visibilidade=? WHERE id=?")
+    await db().prepare("UPDATE casos SET titulo=?, tema=?, contexto=?, etapas=?, visibilidade=? WHERE id=?")
       .run(titulo, tema, contexto, JSON.stringify(etapas), visibilidade, id);
-    registrarAcao(s.id, "caso_editado", `#${id} ${titulo}`);
+    await registrarAcao(s.id, "caso_editado", `#${id} ${titulo}`);
   } else {
-    db().prepare("INSERT INTO casos (titulo, tema, contexto, etapas, visibilidade) VALUES (?,?,?,?,?)")
+    await db().prepare("INSERT INTO casos (titulo, tema, contexto, etapas, visibilidade) VALUES (?,?,?,?,?)")
       .run(titulo, tema, contexto, JSON.stringify(etapas), visibilidade);
-    registrarAcao(s.id, "caso_criado", titulo);
+    await registrarAcao(s.id, "caso_criado", titulo);
   }
   revalidatePath("/diretoria/casos");
   redirect("/diretoria/casos?ok=1");
@@ -255,8 +255,8 @@ export async function salvarCaso(formData: FormData) {
 export async function excluirCaso(formData: FormData) {
   const s = await exigirDiretoria();
   const id = Number(formData.get("id"));
-  db().prepare("DELETE FROM casos WHERE id = ?").run(id);
-  registrarAcao(s.id, "caso_excluido", `#${id}`);
+  await db().prepare("DELETE FROM casos WHERE id = ?").run(id);
+  await registrarAcao(s.id, "caso_excluido", `#${id}`);
   revalidatePath("/diretoria/casos");
 }
 
@@ -273,9 +273,9 @@ export async function salvarSeletivo(formData: FormData) {
     const [etapa, data] = l.split("|").map((p) => p.trim());
     return { etapa, data: data || "" };
   });
-  db().prepare("UPDATE seletivo SET ativo=?, vagas=?, prazo=?, taxa_centavos=?, edital=?, cronograma=? WHERE id=1")
+  await db().prepare("UPDATE seletivo SET ativo=?, vagas=?, prazo=?, taxa_centavos=?, edital=?, cronograma=? WHERE id=1")
     .run(ativo, vagas, prazo, taxa, edital, JSON.stringify(cronograma));
-  registrarAcao(s.id, "seletivo_configurado", `ativo=${ativo}, vagas=${vagas}, prazo=${prazo}`);
+  await registrarAcao(s.id, "seletivo_configurado", `ativo=${ativo}, vagas=${vagas}, prazo=${prazo}`);
   revalidatePath("/diretoria/seletivo");
   revalidatePath("/seletivo");
   revalidatePath("/");
@@ -286,8 +286,8 @@ export async function alterarStatusInscricao(formData: FormData) {
   const id = Number(formData.get("id"));
   const status = String(formData.get("status"));
   if (!["pendente", "aprovado", "reprovado", "espera"].includes(status)) return;
-  db().prepare("UPDATE inscricoes SET status = ? WHERE id = ?").run(status, id);
-  registrarAcao(s.id, "inscricao_status", `#${id} → ${status}`);
+  await db().prepare("UPDATE inscricoes SET status = ? WHERE id = ?").run(status, id);
+  await registrarAcao(s.id, "inscricao_status", `#${id} → ${status}`);
   revalidatePath("/diretoria/seletivo");
 }
 
@@ -299,16 +299,16 @@ export async function alterarStatusInscricao(formData: FormData) {
 export async function criarContaCandidato(formData: FormData) {
   const s = await exigirDiretoria();
   const id = Number(formData.get("id"));
-  const insc = db().prepare("SELECT * FROM inscricoes WHERE id = ?").get(id) as
+  const insc = (await db().prepare("SELECT * FROM inscricoes WHERE id = ?").get(id)) as
     | { id: number; nome: string; matricula: string; email: string; telefone: string; semestre: string; user_id: number | null }
     | undefined;
   if (!insc || insc.user_id) return;
   try {
-    const r = db().prepare(
+    const r = await db().prepare(
       "INSERT INTO users (nome, matricula, email, telefone, semestre, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,'candidato',1)"
     ).run(insc.nome, insc.matricula, insc.email.toLowerCase(), insc.telefone, insc.semestre, bcrypt.hashSync(insc.matricula, 10));
-    db().prepare("UPDATE inscricoes SET user_id = ? WHERE id = ?").run(r.lastInsertRowid, id);
-    registrarAcao(s.id, "candidato_conta_criada", `#${id} ${insc.nome}`);
+    await db().prepare("UPDATE inscricoes SET user_id = ? WHERE id = ?").run(r.lastInsertRowid, id);
+    await registrarAcao(s.id, "candidato_conta_criada", `#${id} ${insc.nome}`);
   } catch {
     redirect("/diretoria/seletivo?erro=" + encodeURIComponent("Matrícula ou e-mail já cadastrado em outra conta."));
   }
@@ -335,21 +335,21 @@ export async function enviarResultados(formData: FormData) {
   const status = String(formData.get("status"));
   const modelo = TEXTOS_RESULTADO[status];
   if (!modelo) return;
-  const inscritos = db().prepare("SELECT nome, email, telefone FROM inscricoes WHERE status = ?").all(status) as
+  const inscritos = (await db().prepare("SELECT nome, email, telefone FROM inscricoes WHERE status = ?").all(status)) as
     { nome: string; email: string; telefone: string }[];
   for (const i of inscritos) {
     await notificar(i, modelo.assunto, modelo.corpo(i.nome.split(" ")[0]), `resultado_${status}`);
   }
-  registrarAcao(s.id, "resultado_enviado", `${status}: ${inscritos.length} candidato(s)`);
+  await registrarAcao(s.id, "resultado_enviado", `${status}: ${inscritos.length} candidato(s)`);
   revalidatePath("/diretoria/seletivo");
   redirect("/diretoria/seletivo?ok=" + encodeURIComponent(`Resultado enviado para ${inscritos.length} candidato(s) (${status}).`));
 }
 
 export async function matricularAprovados() {
   const s = await exigirDiretoria();
-  const aprovados = db().prepare(
+  const aprovados = (await db().prepare(
     "SELECT id, nome, matricula, email, telefone, semestre, user_id FROM inscricoes WHERE status='aprovado'"
-  ).all() as { id: number; nome: string; matricula: string; email: string; telefone: string; semestre: string; user_id: number | null }[];
+  ).all()) as { id: number; nome: string; matricula: string; email: string; telefone: string; semestre: string; user_id: number | null }[];
   let criados = 0, promovidos = 0;
   const ins = db().prepare(
     "INSERT INTO users (nome, matricula, email, telefone, semestre, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,'ligante',1)"
@@ -359,17 +359,17 @@ export async function matricularAprovados() {
   for (const a of aprovados) {
     if (a.user_id) {
       // já tinha conta de candidato (acesso limitado) — só promove, sem mexer na senha
-      promove.run(a.user_id);
+      await promove.run(a.user_id);
       promovidos++;
       continue;
     }
     try {
-      const r = ins.run(a.nome, a.matricula, a.email.toLowerCase(), a.telefone, a.semestre, bcrypt.hashSync(a.matricula, 10));
-      vincula.run(r.lastInsertRowid, a.id);
+      const r = await ins.run(a.nome, a.matricula, a.email.toLowerCase(), a.telefone, a.semestre, bcrypt.hashSync(a.matricula, 10));
+      await vincula.run(r.lastInsertRowid, a.id);
       criados++;
     } catch { /* já cadastrado */ }
   }
-  registrarAcao(s.id, "aprovados_matriculados", `${criados} contas criadas, ${promovidos} promovidas`);
+  await registrarAcao(s.id, "aprovados_matriculados", `${criados} contas criadas, ${promovidos} promovidas`);
   revalidatePath("/diretoria/ligantes");
   revalidatePath("/diretoria/seletivo");
   redirect("/diretoria/ligantes?ok=" + encodeURIComponent(`${criados} conta(s) criada(s), ${promovidos} candidato(s) promovido(s) a ligante.`));
@@ -382,8 +382,8 @@ export async function publicarAviso(formData: FormData) {
   const mensagem = String(formData.get("mensagem") || "").trim();
   const notificarTb = formData.get("notificar") === "on";
   if (!titulo || !mensagem) return;
-  db().prepare("INSERT INTO avisos (titulo, mensagem, autor_id) VALUES (?,?,?)").run(titulo, mensagem, s.id);
-  registrarAcao(s.id, "aviso_publicado", titulo);
+  await db().prepare("INSERT INTO avisos (titulo, mensagem, autor_id) VALUES (?,?,?)").run(titulo, mensagem, s.id);
+  await registrarAcao(s.id, "aviso_publicado", titulo);
   if (notificarTb) await notificarLigantes("todos", titulo, mensagem, "aviso_diretoria");
   revalidatePath("/diretoria/notificacoes");
   revalidatePath("/ligante/mural");
@@ -404,7 +404,7 @@ export async function enviarMensagem(formData: FormData) {
     const id = Number(formData.get("individual"));
     if (id) await notificarLigantes([id], assunto, corpo, "aviso_diretoria");
   }
-  registrarAcao(s.id, "mensagem_manual_enviada", `${destino}: ${assunto}`);
+  await registrarAcao(s.id, "mensagem_manual_enviada", `${destino}: ${assunto}`);
   revalidatePath("/diretoria/notificacoes");
   redirect("/diretoria/notificacoes?ok=1");
 }
@@ -412,14 +412,16 @@ export async function enviarMensagem(formData: FormData) {
 /* ── WhatsApp ──────────────────────────────────── */
 export async function conectarWhatsApp() {
   const s = await exigirDiretoria();
-  registrarAcao(s.id, "whatsapp_conectar");
+  if (process.env.RUNTIME === "cloudflare") return;
+  await registrarAcao(s.id, "whatsapp_conectar");
   await waIniciar();
   revalidatePath("/diretoria/whatsapp");
 }
 
 export async function desconectarWhatsApp() {
   const s = await exigirDiretoria();
-  registrarAcao(s.id, "whatsapp_desconectar");
+  if (process.env.RUNTIME === "cloudflare") return;
+  await registrarAcao(s.id, "whatsapp_desconectar");
   await waDesconectar();
   revalidatePath("/diretoria/whatsapp");
 }
@@ -433,9 +435,9 @@ export async function lancarFinanceiro(formData: FormData) {
   const valor = Math.round(Number(String(formData.get("valor") || "0").replace(/\./g, "").replace(",", ".")) * 100);
   const data = String(formData.get("data") || new Date().toISOString().slice(0, 10));
   if (!descricao || !valor) return;
-  db().prepare("INSERT INTO financeiro (tipo, descricao, valor_centavos, data, autor_id) VALUES (?,?,?,?,?)")
+  await db().prepare("INSERT INTO financeiro (tipo, descricao, valor_centavos, data, autor_id) VALUES (?,?,?,?,?)")
     .run(tipo, descricao, Math.abs(valor), data, s.id);
-  registrarAcao(s.id, "lancamento_financeiro", `${tipo}: ${descricao}`);
+  await registrarAcao(s.id, "lancamento_financeiro", `${tipo}: ${descricao}`);
   revalidatePath("/diretoria/financeiro");
 }
 
@@ -443,8 +445,8 @@ export async function excluirLancamento(formData: FormData) {
   const s = await exigirDiretoria();
   if (!podeVerFinanceiro(s)) redirect("/diretoria");
   const id = Number(formData.get("id"));
-  db().prepare("DELETE FROM financeiro WHERE id = ?").run(id);
-  registrarAcao(s.id, "lancamento_excluido", `#${id}`);
+  await db().prepare("DELETE FROM financeiro WHERE id = ?").run(id);
+  await registrarAcao(s.id, "lancamento_excluido", `#${id}`);
   revalidatePath("/diretoria/financeiro");
 }
 
@@ -456,8 +458,8 @@ export async function salvarEvento(formData: FormData) {
   const data = String(formData.get("data") || "");
   const local = String(formData.get("local") || "").trim() || null;
   if (!titulo || !data) return;
-  db().prepare("INSERT INTO eventos (titulo, tipo, data, local) VALUES (?,?,?,?)").run(titulo, tipo, data, local);
-  registrarAcao(s.id, "evento_criado", titulo);
+  await db().prepare("INSERT INTO eventos (titulo, tipo, data, local) VALUES (?,?,?,?)").run(titulo, tipo, data, local);
+  await registrarAcao(s.id, "evento_criado", titulo);
   revalidatePath("/diretoria/conteudo");
   revalidatePath("/calendario");
 }
@@ -474,19 +476,19 @@ export async function salvarExtensao(formData: FormData) {
   try {
     arquivoId = await salvarArquivo(formData.get("arquivo") as File | null);
   } catch { /* ignora upload inválido */ }
-  db().prepare("INSERT INTO extensao (titulo, tipo, descricao, data, link, arquivo_id) VALUES (?,?,?,?,?,?)")
+  await db().prepare("INSERT INTO extensao (titulo, tipo, descricao, data, link, arquivo_id) VALUES (?,?,?,?,?,?)")
     .run(titulo, tipo, descricao, data, link, arquivoId);
-  registrarAcao(s.id, "extensao_criada", titulo);
+  await registrarAcao(s.id, "extensao_criada", titulo);
   revalidatePath("/diretoria/conteudo");
   revalidatePath("/extensao");
 }
 
 export async function salvarConfiguracoes(formData: FormData) {
   const s = await exigirDiretoria();
-  setConfig("periodo_atual", String(formData.get("periodo") || getConfig("periodo_atual")));
-  setConfig("horas_por_aula", String(Number(formData.get("horas_por_aula")) || 2));
-  setConfig("email_contato", String(formData.get("email_contato") || "").trim());
-  registrarAcao(s.id, "configuracoes_salvas");
+  await setConfig("periodo_atual", String(formData.get("periodo") || (await getConfig("periodo_atual"))));
+  await setConfig("horas_por_aula", String(Number(formData.get("horas_por_aula")) || 2));
+  await setConfig("email_contato", String(formData.get("email_contato") || "").trim());
+  await registrarAcao(s.id, "configuracoes_salvas");
   revalidatePath("/diretoria");
 }
 
@@ -494,7 +496,7 @@ export async function salvarConfiguracoes(formData: FormData) {
 export async function reenviarConfirmacao(formData: FormData) {
   await exigirDiretoria();
   const id = Number(formData.get("id"));
-  const i = db().prepare("SELECT nome, email, matricula, semestre FROM inscricoes WHERE id = ?").get(id) as
+  const i = (await db().prepare("SELECT nome, email, matricula, semestre FROM inscricoes WHERE id = ?").get(id)) as
     { nome: string; email: string; matricula: string; semestre: string } | undefined;
   if (!i) return;
   await enviarEmail(
@@ -514,10 +516,10 @@ export async function criarAlbum(formData: FormData) {
   const data = String(formData.get("data") || "") || null;
   const visibilidade = String(formData.get("visibilidade") || "publico") === "ligantes" ? "ligantes" : "publico";
   if (!titulo) redirect("/diretoria/galeria?erro=" + encodeURIComponent("Informe o título do álbum."));
-  const r = db().prepare(
+  const r = await db().prepare(
     "INSERT INTO galeria_albuns (titulo, descricao, data, visibilidade) VALUES (?, ?, ?, ?)"
   ).run(titulo, descricao, data, visibilidade);
-  registrarAcao(s.id, "album_criado", titulo);
+  await registrarAcao(s.id, "album_criado", titulo);
   revalidatePath("/diretoria/galeria");
   redirect(`/diretoria/galeria/${r.lastInsertRowid}`);
 }
@@ -525,8 +527,8 @@ export async function criarAlbum(formData: FormData) {
 export async function excluirAlbum(formData: FormData) {
   const s = await exigirGaleria();
   const id = Number(formData.get("id"));
-  db().prepare("DELETE FROM galeria_albuns WHERE id = ?").run(id);
-  registrarAcao(s.id, "album_excluido", `#${id}`);
+  await db().prepare("DELETE FROM galeria_albuns WHERE id = ?").run(id);
+  await registrarAcao(s.id, "album_excluido", `#${id}`);
   revalidatePath("/diretoria/galeria");
   revalidatePath("/galeria");
   redirect("/diretoria/galeria");
@@ -545,13 +547,13 @@ export async function adicionarFotos(formData: FormData) {
     try {
       const arquivoId = await salvarArquivo(f);
       if (!arquivoId) continue;
-      db().prepare("INSERT INTO galeria_fotos (album_id, arquivo_id, legenda) VALUES (?, ?, ?)").run(albumId, arquivoId, legenda);
+      await db().prepare("INSERT INTO galeria_fotos (album_id, arquivo_id, legenda) VALUES (?, ?, ?)").run(albumId, arquivoId, legenda);
       salvas++;
     } catch (e) {
       falhas.push(`${f.name} (${e instanceof Error ? e.message : "falha no upload"})`);
     }
   }
-  registrarAcao(s.id, "fotos_adicionadas", `album #${albumId}: ${salvas} foto(s)`);
+  await registrarAcao(s.id, "fotos_adicionadas", `album #${albumId}: ${salvas} foto(s)`);
   revalidatePath(`/diretoria/galeria/${albumId}`);
   revalidatePath("/galeria");
   revalidatePath(`/galeria/${albumId}`);
@@ -563,8 +565,8 @@ export async function excluirFoto(formData: FormData) {
   const s = await exigirGaleria();
   const id = Number(formData.get("id"));
   const albumId = Number(formData.get("album_id"));
-  db().prepare("DELETE FROM galeria_fotos WHERE id = ?").run(id);
-  registrarAcao(s.id, "foto_excluida", `#${id}`);
+  await db().prepare("DELETE FROM galeria_fotos WHERE id = ?").run(id);
+  await registrarAcao(s.id, "foto_excluida", `#${id}`);
   revalidatePath(`/diretoria/galeria/${albumId}`);
   revalidatePath("/galeria");
   revalidatePath(`/galeria/${albumId}`);

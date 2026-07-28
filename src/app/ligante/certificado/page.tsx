@@ -3,9 +3,9 @@ import { frequenciaDe, getConfig } from "@/lib/db";
 
 export default async function CertificadoPage() {
   const s = await exigirLigante();
-  const freq = frequenciaDe(s.id);
-  const horas = freq.presentes * Number(getConfig("horas_por_aula", "2"));
-  const periodo = getConfig("periodo_atual", "2026");
+  const freq = await frequenciaDe(s.id);
+  const horas = freq.presentes * Number(await getConfig("horas_por_aula", "2"));
+  const periodo = await getConfig("periodo_atual", "2026");
 
   return (
     <>

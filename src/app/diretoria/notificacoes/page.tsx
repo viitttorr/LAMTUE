@@ -6,8 +6,8 @@ import { fmtData } from "@/lib/util";
 export default async function NotificacoesPage({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
   await exigirDiretoria();
   const { ok } = await searchParams;
-  const ligantes = db().prepare("SELECT id, nome FROM users WHERE role='ligante' AND ativo=1 ORDER BY nome").all() as { id: number; nome: string }[];
-  const historico = db().prepare("SELECT * FROM mensagens ORDER BY id DESC LIMIT 100").all() as
+  const ligantes = (await db().prepare("SELECT id, nome FROM users WHERE role='ligante' AND ativo=1 ORDER BY nome").all()) as { id: number; nome: string }[];
+  const historico = (await db().prepare("SELECT * FROM mensagens ORDER BY id DESC LIMIT 100").all()) as
     { id: number; canal: string; destinatario: string; assunto: string | null; corpo: string; evento: string; status: string; criado_em: string }[];
 
   return (

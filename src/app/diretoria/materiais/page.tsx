@@ -7,10 +7,10 @@ import { MATERIAIS_MAX_BYTES } from "@/lib/arquivos";
 export default async function MateriaisPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   await exigirDiretoria();
   const { ok, erro } = await searchParams;
-  const materiais = db().prepare(
+  const materiais = (await db().prepare(
     "SELECT m.*, a.titulo AS aula FROM materiais m LEFT JOIN aulas a ON a.id = m.aula_id ORDER BY m.id DESC"
-  ).all() as { id: number; titulo: string; tema: string; tipo: string; url: string | null; arquivo_id: number | null; visibilidade: string; aula: string | null; criado_em: string }[];
-  const aulas = db().prepare("SELECT id, titulo, data FROM aulas ORDER BY data DESC").all() as { id: number; titulo: string; data: string }[];
+  ).all()) as { id: number; titulo: string; tema: string; tipo: string; url: string | null; arquivo_id: number | null; visibilidade: string; aula: string | null; criado_em: string }[];
+  const aulas = (await db().prepare("SELECT id, titulo, data FROM aulas ORDER BY data DESC").all()) as { id: number; titulo: string; data: string }[];
 
   return (
     <>

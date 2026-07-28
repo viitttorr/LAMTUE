@@ -19,23 +19,23 @@ export async function gerarQuestoes(tema: string, quantidade: number, dificuldad
       const ins = db().prepare(
         "INSERT INTO questoes (tema, dificuldade, enunciado, alternativas, correta, comentario, origem, aprovada) VALUES (?, ?, ?, ?, ?, ?, 'ia', 0)"
       );
-      for (const q of questoes) ins.run(tema, dificuldade, q.enunciado, JSON.stringify(q.alternativas), q.correta, q.comentario);
+      for (const q of questoes) await ins.run(tema, dificuldade, q.enunciado, JSON.stringify(q.alternativas), q.correta, q.comentario);
       return { questoes, origem: "ia" };
     } catch (e) {
       console.error("Falha na geração por IA, usando banco de questões:", e);
     }
   }
-  return { questoes: doBanco(tema, quantidade, dificuldade), origem: "banco" };
+  return { questoes: await doBanco(tema, quantidade, dificuldade), origem: "banco" };
 }
 
-function doBanco(tema: string, quantidade: number, dificuldade: string): Questao[] {
-  let rows = db().prepare(
+async function doBanco(tema: string, quantidade: number, dificuldade: string): Promise<Questao[]> {
+  let rows = (await db().prepare(
     "SELECT enunciado, alternativas, correta, comentario FROM questoes WHERE tema = ? AND dificuldade = ? AND aprovada = 1 ORDER BY RANDOM() LIMIT ?"
-  ).all(tema, dificuldade, quantidade) as { enunciado: string; alternativas: string; correta: number; comentario: string | null }[];
+  ).all(tema, dificuldade, quantidade)) as { enunciado: string; alternativas: string; correta: number; comentario: string | null }[];
   if (rows.length < quantidade) {
-    const extra = db().prepare(
+    const extra = (await db().prepare(
       "SELECT enunciado, alternativas, correta, comentario FROM questoes WHERE tema = ? AND aprovada = 1 AND dificuldade != ? ORDER BY RANDOM() LIMIT ?"
-    ).all(tema, dificuldade, quantidade - rows.length) as typeof rows;
+    ).all(tema, dificuldade, quantidade - rows.length)) as typeof rows;
     rows = rows.concat(extra);
   }
   return rows.map((r) => ({
@@ -78,9 +78,9 @@ Regras: 4 alternativas por questão; "correta" é o índice (0 a 3); comentário
 }
 
 /** Temas com maior taxa de erro do ligante (para sugerir reforço na trilha). */
-export function temasComMaisErros(userId: number): { tema: string; taxaErro: number }[] {
-  const rows = db().prepare(
+export async function temasComMaisErros(userId: number): Promise<{ tema: string; taxaErro: number }[]> {
+  const rows = (await db().prepare(
     "SELECT tema, AVG(score) AS media, COUNT(*) AS n FROM simulados WHERE user_id = ? AND score IS NOT NULL GROUP BY tema HAVING n >= 1 ORDER BY media ASC LIMIT 3"
-  ).all(userId) as { tema: string; media: number }[];
+  ).all(userId)) as { tema: string; media: number }[];
   return rows.filter((r) => r.media < 70).map((r) => ({ tema: r.tema, taxaErro: Math.round(100 - r.media) }));
 }

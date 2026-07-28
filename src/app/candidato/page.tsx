@@ -11,7 +11,7 @@ const MENSAGEM_STATUS: Record<string, string> = {
 
 export default async function CandidatoPage() {
   const s = await exigirCandidato();
-  const insc = db().prepare("SELECT status, criado_em FROM inscricoes WHERE user_id = ?").get(s.id) as
+  const insc = (await db().prepare("SELECT status, criado_em FROM inscricoes WHERE user_id = ?").get(s.id)) as
     | { status: string; criado_em: string }
     | undefined;
 

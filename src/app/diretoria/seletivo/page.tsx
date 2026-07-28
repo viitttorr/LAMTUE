@@ -6,10 +6,10 @@ import { fmtData } from "@/lib/util";
 export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   await exigirDiretoria();
   const { ok, erro } = await searchParams;
-  const sel = db().prepare("SELECT * FROM seletivo WHERE id = 1").get() as {
+  const sel = (await db().prepare("SELECT * FROM seletivo WHERE id = 1").get()) as {
     ativo: number; vagas: number; prazo: string | null; taxa_centavos: number; edital: string | null; cronograma: string | null;
   };
-  const inscritos = db().prepare("SELECT * FROM inscricoes ORDER BY criado_em DESC").all() as {
+  const inscritos = (await db().prepare("SELECT * FROM inscricoes ORDER BY criado_em DESC").all()) as {
     id: number; nome: string; matricula: string; semestre: string; email: string; telefone: string;
     comprovante_id: number | null; status: string; criado_em: string; user_id: number | null;
   }[];

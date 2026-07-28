@@ -5,11 +5,11 @@ import TemaSelect from "@/components/TemaSelect";
 
 export default async function QuestoesPage() {
   await exigirDiretoria();
-  const pendentes = db().prepare("SELECT * FROM questoes WHERE aprovada = 0 ORDER BY id DESC").all() as
+  const pendentes = (await db().prepare("SELECT * FROM questoes WHERE aprovada = 0 ORDER BY id DESC").all()) as
     { id: number; tema: string; dificuldade: string; enunciado: string; alternativas: string; correta: number; comentario: string | null }[];
-  const totais = db().prepare(
+  const totais = (await db().prepare(
     "SELECT tema, COUNT(*) AS n, SUM(CASE WHEN origem='ia' THEN 1 ELSE 0 END) AS ia FROM questoes WHERE aprovada = 1 GROUP BY tema ORDER BY tema"
-  ).all() as { tema: string; n: number; ia: number }[];
+  ).all()) as { tema: string; n: number; ia: number }[];
 
   return (
     <>

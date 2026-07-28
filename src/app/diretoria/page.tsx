@@ -1,6 +1,5 @@
 import { exigirDiretoria } from "@/lib/auth";
 import { db, frequenciaDe, getConfig } from "@/lib/db";
-import { waStatus } from "@/lib/whatsapp";
 import { salvarConfiguracoes } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
 import Link from "next/link";
@@ -8,15 +7,20 @@ import Counter from "@/components/Counter";
 
 export default async function DashboardDiretoria() {
   const s = await exigirDiretoria();
-  const ligantes = db().prepare("SELECT id, nome FROM users WHERE role='ligante' AND ativo=1").all() as { id: number; nome: string }[];
-  const aulasRealizadas = (db().prepare("SELECT COUNT(*) AS n FROM aulas WHERE data <= date('now')").get() as { n: number }).n;
-  const aulasPlanejadas = (db().prepare("SELECT COUNT(*) AS n FROM aulas").get() as { n: number }).n;
-  const pendentes = (db().prepare("SELECT COUNT(*) AS n FROM inscricoes WHERE status='pendente'").get() as { n: number }).n;
-  const emRisco = ligantes.filter((l) => { const f = frequenciaDe(l.id); return f.total > 0 && !f.elegivel; });
-  const wa = waStatus();
-  const ultimasAcoes = db().prepare(
+  const ligantes = (await db().prepare("SELECT id, nome FROM users WHERE role='ligante' AND ativo=1").all()) as { id: number; nome: string }[];
+  const aulasRealizadas = ((await db().prepare("SELECT COUNT(*) AS n FROM aulas WHERE data <= date('now')").get()) as { n: number }).n;
+  const aulasPlanejadas = ((await db().prepare("SELECT COUNT(*) AS n FROM aulas").get()) as { n: number }).n;
+  const pendentes = ((await db().prepare("SELECT COUNT(*) AS n FROM inscricoes WHERE status='pendente'").get()) as { n: number }).n;
+  const frequencias = new Map(await Promise.all(ligantes.map(async (l) => [l.id, await frequenciaDe(l.id)] as const)));
+  const emRisco = ligantes.filter((l) => { const f = frequencias.get(l.id)!; return f.total > 0 && !f.elegivel; });
+  const isCloudflare = process.env.RUNTIME === "cloudflare";
+  const wa = isCloudflare ? null : (await import("@/lib/whatsapp")).waStatus();
+  const periodoAtual = await getConfig("periodo_atual", "2026/2");
+  const horasPorAula = await getConfig("horas_por_aula", "2");
+  const emailContato = await getConfig("email_contato", "");
+  const ultimasAcoes = (await db().prepare(
     "SELECT a.acao, a.detalhes, a.criado_em, u.nome FROM audit_log a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.id DESC LIMIT 8"
-  ).all() as { acao: string; detalhes: string | null; criado_em: string; nome: string | null }[];
+  ).all()) as { acao: string; detalhes: string | null; criado_em: string; nome: string | null }[];
 
   return (
     <>
@@ -47,10 +51,14 @@ export default async function DashboardDiretoria() {
           <div className="card">
             <div className="flex-between">
               <h3 style={{ fontSize: 16 }}>Conexão WhatsApp</h3>
-              <span className={`badge ${wa.status === "conectado" ? "badge-green" : wa.status === "aguardando_qr" ? "badge-amber" : "badge-red"}`}>
-                <span className={`pulse-dot ${wa.status === "conectado" ? "" : "red"}`} style={{ width: 7, height: 7 }} />
-                {wa.status === "conectado" ? `Conectado${wa.numero ? ` (${wa.numero})` : ""}` : wa.status === "aguardando_qr" ? "Aguardando QR" : "Desconectado"}
-              </span>
+              {isCloudflare ? (
+                <span className="badge badge-amber">Indisponível</span>
+              ) : (
+                <span className={`badge ${wa!.status === "conectado" ? "badge-green" : wa!.status === "aguardando_qr" ? "badge-amber" : "badge-red"}`}>
+                  <span className={`pulse-dot ${wa!.status === "conectado" ? "" : "red"}`} style={{ width: 7, height: 7 }} />
+                  {wa!.status === "conectado" ? `Conectado${wa!.numero ? ` (${wa!.numero})` : ""}` : wa!.status === "aguardando_qr" ? "Aguardando QR" : "Desconectado"}
+                </span>
+              )}
             </div>
             <p className="small mt-1">Número dedicado da liga para notificações automáticas.</p>
             <Link href="/diretoria/whatsapp" className="btn btn-sm mt-2">Gerenciar conexão</Link>
@@ -61,7 +69,7 @@ export default async function DashboardDiretoria() {
               <h3 style={{ fontSize: 16 }}>⚠ Em risco de perder o certificado</h3>
               <div className="mt-1" style={{ display: "grid", gap: 6 }}>
                 {emRisco.slice(0, 6).map((l) => {
-                  const f = frequenciaDe(l.id);
+                  const f = frequencias.get(l.id)!;
                   return (
                     <div key={l.id} className="flex-between" style={{ fontSize: 14 }}>
                       <span>{l.nome}</span>
@@ -79,15 +87,15 @@ export default async function DashboardDiretoria() {
               <div className="grid2" style={{ gap: 12 }}>
                 <div>
                   <label className="label">Período atual</label>
-                  <input className="input" name="periodo" defaultValue={getConfig("periodo_atual", "2026/2")} />
+                  <input className="input" name="periodo" defaultValue={periodoAtual} />
                 </div>
                 <div>
                   <label className="label">Horas por aula</label>
-                  <input className="input" type="number" name="horas_por_aula" defaultValue={getConfig("horas_por_aula", "2")} min={1} />
+                  <input className="input" type="number" name="horas_por_aula" defaultValue={horasPorAula} min={1} />
                 </div>
               </div>
               <label className="label">E-mail de contato da liga</label>
-              <input className="input" type="email" name="email_contato" defaultValue={getConfig("email_contato", "")} placeholder="lamtue@..." />
+              <input className="input" type="email" name="email_contato" defaultValue={emailContato} placeholder="lamtue@..." />
               <button className="btn btn-sm mt-2" type="submit">Salvar</button>
             </form>
           </div>

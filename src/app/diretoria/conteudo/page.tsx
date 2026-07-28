@@ -5,8 +5,8 @@ import { fmtData } from "@/lib/util";
 
 export default async function ConteudoPage() {
   await exigirDiretoria();
-  const eventos = db().prepare("SELECT * FROM eventos ORDER BY data DESC LIMIT 10").all() as { id: number; titulo: string; tipo: string; data: string }[];
-  const extensoes = db().prepare("SELECT * FROM extensao ORDER BY id DESC LIMIT 10").all() as { id: number; titulo: string; tipo: string }[];
+  const eventos = (await db().prepare("SELECT * FROM eventos ORDER BY data DESC LIMIT 10").all()) as { id: number; titulo: string; tipo: string; data: string }[];
+  const extensoes = (await db().prepare("SELECT * FROM extensao ORDER BY id DESC LIMIT 10").all()) as { id: number; titulo: string; tipo: string }[];
 
   return (
     <>
