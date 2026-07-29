@@ -2,20 +2,25 @@ import { exigirDiretoria } from "@/lib/auth";
 import { db, STATUS_LABEL } from "@/lib/db";
 import { salvarSeletivo, alterarStatusInscricao, enviarResultados, matricularAprovados, reenviarConfirmacao, criarContaCandidato, importarInscritos, excluirInscricao, salvarAcertos, removerEditalPdf } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
+import Link from "next/link";
 
-export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
+export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string; q?: string }> }) {
   await exigirDiretoria();
-  const { ok, erro } = await searchParams;
+  const { ok, erro, q } = await searchParams;
   const sel = (await db().prepare("SELECT * FROM seletivo WHERE id = 1").get()) as {
     ativo: number; vagas: number; prazo: string | null; taxa_centavos: number; edital: string | null; cronograma: string | null;
     edital_arquivo_id: number | null;
   };
-  const inscritos = (await db().prepare("SELECT * FROM inscricoes ORDER BY criado_em DESC").all()) as {
+  const todosInscritos = (await db().prepare("SELECT * FROM inscricoes ORDER BY nome COLLATE NOCASE ASC").all()) as {
     id: number; nome: string; matricula: string; semestre: string; email: string; telefone: string;
     comprovante_id: number | null; status: string; criado_em: string; user_id: number | null; turma: string | null;
     acertos: number;
   }[];
-  const porStatus = (st: string) => inscritos.filter((i) => i.status === st).length;
+  const busca = (q || "").trim().toLowerCase();
+  const inscritos = busca
+    ? todosInscritos.filter((i) => i.nome.toLowerCase().includes(busca) || i.matricula.toLowerCase().includes(busca))
+    : todosInscritos;
+  const porStatus = (st: string) => todosInscritos.filter((i) => i.status === st).length;
   const cronogramaTexto = sel.cronograma
     ? (JSON.parse(sel.cronograma) as { etapa: string; data: string }[]).map((c) => `${c.etapa} | ${c.data}`).join("\n")
     : "";
@@ -112,7 +117,14 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
         </form>
       </div>
 
-      <h3 style={{ fontSize: 17, margin: "10px 0 12px" }}>Inscritos em tempo real</h3>
+      <div className="flex-between" style={{ margin: "10px 0 12px", flexWrap: "wrap", gap: 10 }}>
+        <h3 style={{ fontSize: 17 }}>Inscritos em tempo real {busca && <span className="small muted">({inscritos.length} de {todosInscritos.length})</span>}</h3>
+        <form method="get" className="flex" style={{ gap: 8 }}>
+          <input className="input" type="text" name="q" defaultValue={q ?? ""} placeholder="Buscar por nome ou matrícula…" style={{ padding: "7px 12px", fontSize: 13.5, width: 240 }} />
+          <button className="btn btn-sm" type="submit">Filtrar</button>
+          {busca && <Link href="/diretoria/seletivo" className="btn btn-sm btn-ghost">Limpar</Link>}
+        </form>
+      </div>
       <div className="table-wrap">
         <table className="tbl">
           <thead><tr><th>Candidato</th><th>Matrícula</th><th>Sem.</th><th>Contato</th><th>Comprovante</th><th>Inscrição</th><th>Status</th><th>Gabarito (21)</th><th>Conta</th><th></th></tr></thead>

@@ -1,20 +1,42 @@
 import { exigirDiretoria } from "@/lib/auth";
 import { db, TEMAS } from "@/lib/db";
-import { salvarQuestao, moderarQuestao } from "@/app/actions/diretoria";
+import { salvarQuestao, moderarQuestao, importarQuestoes } from "@/app/actions/diretoria";
 import TemaSelect from "@/components/TemaSelect";
+import Link from "next/link";
 
-export default async function QuestoesPage() {
+export default async function QuestoesPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string; tema?: string }> }) {
   await exigirDiretoria();
+  const { ok, erro, tema: temaFiltro } = await searchParams;
   const pendentes = (await db().prepare("SELECT * FROM questoes WHERE aprovada = 0 ORDER BY id DESC").all()) as
     { id: number; tema: string; dificuldade: string; enunciado: string; alternativas: string; correta: number; comentario: string | null }[];
   const totais = (await db().prepare(
     "SELECT tema, COUNT(*) AS n, SUM(CASE WHEN origem='ia' THEN 1 ELSE 0 END) AS ia FROM questoes WHERE aprovada = 1 GROUP BY tema ORDER BY tema"
   ).all()) as { tema: string; n: number; ia: number }[];
+  const aprovadasDoTema = temaFiltro
+    ? ((await db().prepare("SELECT * FROM questoes WHERE aprovada = 1 AND tema = ? ORDER BY id DESC").all(temaFiltro)) as
+        { id: number; tema: string; dificuldade: string; enunciado: string; alternativas: string; correta: number; comentario: string | null }[])
+    : [];
 
   return (
     <>
       <h1 className="page-title">Banco de Questões</h1>
       <p className="page-sub">Questões manuais entram aprovadas; questões geradas por IA aguardam sua revisão.</p>
+      {ok && <div className="alert alert-green">{ok}</div>}
+      {erro && <div className="alert alert-red">{erro}</div>}
+
+      <div className="card mb-3">
+        <h3 style={{ fontSize: 16 }}>Importar questões em massa (CSV)</h3>
+        <p className="small mt-1">
+          Colunas: <code>tema;dificuldade;enunciado;alt_a;alt_b;alt_c;alt_d;correta;comentario</code> — separadas por{" "}
+          <code>;</code>, uma linha por questão (cabeçalho opcional). <code>correta</code> aceita A/B/C/D ou 0-3.
+          Entram já aprovadas.
+        </p>
+        <form action={importarQuestoes}>
+          <label className="label">Arquivo CSV</label>
+          <input className="input" type="file" name="csv" accept=".csv,text/csv" required />
+          <button className="btn btn-blue btn-sm mt-2" type="submit">Importar em massa</button>
+        </form>
+      </div>
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="card">
@@ -60,16 +82,55 @@ export default async function QuestoesPage() {
             {totais.length === 0 && <p className="muted mt-1" style={{ fontSize: 14 }}>Banco vazio. As questões geradas por IA nos simulados aparecerão aqui para revisão.</p>}
             <div className="mt-1" style={{ display: "grid", gap: 6 }}>
               {totais.map((t) => (
-                <div key={t.tema} className="flex-between" style={{ fontSize: 14 }}>
-                  <span>{t.tema}</span>
+                <Link
+                  key={t.tema}
+                  href={temaFiltro === t.tema ? "/diretoria/questoes" : `/diretoria/questoes?tema=${encodeURIComponent(t.tema)}`}
+                  className="flex-between hoverable"
+                  style={{ fontSize: 14, padding: "4px 0", color: "inherit", textDecoration: "none" }}
+                >
+                  <span style={{ fontWeight: temaFiltro === t.tema ? 700 : 400 }}>{t.tema}</span>
                   <span className="flex" style={{ gap: 6 }}>
                     <span className="badge badge-blue">{t.n} questões</span>
                     {t.ia > 0 && <span className="badge">{t.ia} de IA</span>}
                   </span>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
+
+          {temaFiltro && (
+            <div className="mt-2">
+              <div className="flex-between">
+                <h3 style={{ fontSize: 16 }}>Questões aprovadas — {temaFiltro}</h3>
+                <Link href="/diretoria/questoes" className="small" style={{ color: "var(--blue)" }}>Fechar ✕</Link>
+              </div>
+              {aprovadasDoTema.length === 0 && <p className="muted mt-1" style={{ fontSize: 14 }}>Nenhuma questão aprovada neste tema.</p>}
+              {aprovadasDoTema.map((q) => {
+                const alts: string[] = JSON.parse(q.alternativas);
+                return (
+                  <div key={q.id} className="card mt-2">
+                    <div className="flex" style={{ gap: 8 }}>
+                      <span className="badge" style={{ textTransform: "capitalize" }}>{q.dificuldade}</span>
+                    </div>
+                    <p className="mt-1" style={{ fontSize: 14.5, fontWeight: 600 }}>{q.enunciado}</p>
+                    <div className="mt-1" style={{ display: "grid", gap: 4, fontSize: 13.5 }}>
+                      {alts.map((a, i) => (
+                        <div key={i} style={{ color: i === q.correta ? "var(--green)" : "var(--text-2)" }}>
+                          <strong>{String.fromCharCode(65 + i)})</strong> {a} {i === q.correta && "✓"}
+                        </div>
+                      ))}
+                    </div>
+                    {q.comentario && <p className="small mt-1">{q.comentario}</p>}
+                    <form action={moderarQuestao} className="mt-2">
+                      <input type="hidden" name="id" value={q.id} />
+                      <input type="hidden" name="acao" value="excluir" />
+                      <button className="btn btn-sm btn-danger" type="submit">Excluir</button>
+                    </form>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <h3 style={{ fontSize: 16, margin: "24px 0 10px" }}>
             Revisão de questões geradas por IA {pendentes.length > 0 && <span className="badge badge-amber">{pendentes.length} pendente(s)</span>}

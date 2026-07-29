@@ -2,6 +2,7 @@
 import { db } from "@/lib/db";
 import { exigirLigante } from "@/lib/auth";
 import { gerarQuestoes } from "@/lib/ai";
+import { registrarAcao } from "@/lib/audit";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -21,13 +22,14 @@ export async function gerarSimulado(formData: FormData) {
   const r = await db().prepare(
     "INSERT INTO simulados (user_id, tema, dificuldade, questoes) VALUES (?, ?, ?, ?)"
   ).run(s.id, tema, dificuldade, JSON.stringify(questoes));
+  await registrarAcao(s.id, "simulado_gerado", `${tema} (${quantidade} questões)`);
   redirect(`/ligante/simulados/${r.lastInsertRowid}${origem === "banco" ? "?origem=banco" : ""}`);
 }
 
 export async function finalizarSimulado(simuladoId: number, respostas: number[]) {
   const s = await exigirLigante();
-  const sim = (await db().prepare("SELECT questoes, user_id, finalizado_em FROM simulados WHERE id = ?").get(simuladoId)) as
-    | { questoes: string; user_id: number; finalizado_em: string | null } | undefined;
+  const sim = (await db().prepare("SELECT questoes, user_id, finalizado_em, tema FROM simulados WHERE id = ?").get(simuladoId)) as
+    | { questoes: string; user_id: number; finalizado_em: string | null; tema: string } | undefined;
   if (!sim || sim.user_id !== s.id || sim.finalizado_em) return;
   const questoes = JSON.parse(sim.questoes) as { correta: number }[];
   const acertos = questoes.reduce((acc, q, i) => acc + (respostas[i] === q.correta ? 1 : 0), 0);
@@ -35,6 +37,7 @@ export async function finalizarSimulado(simuladoId: number, respostas: number[])
   await db().prepare(
     "UPDATE simulados SET respostas = ?, score = ?, finalizado_em = datetime('now','localtime') WHERE id = ?"
   ).run(JSON.stringify(respostas), score, simuladoId);
+  await registrarAcao(s.id, "simulado_finalizado", `${sim.tema}: ${score}%`);
   revalidatePath(`/ligante/simulados/${simuladoId}`);
 }
 
@@ -43,10 +46,12 @@ export async function alternarModulo(tema: string) {
   const existe = await db().prepare("SELECT id FROM trilha_progresso WHERE user_id = ? AND tema = ?").get(s.id, tema);
   if (existe) await db().prepare("DELETE FROM trilha_progresso WHERE user_id = ? AND tema = ?").run(s.id, tema);
   else await db().prepare("INSERT INTO trilha_progresso (user_id, tema) VALUES (?, ?)").run(s.id, tema);
+  await registrarAcao(s.id, existe ? "trilha_modulo_desmarcado" : "trilha_modulo_concluido", tema);
   revalidatePath("/ligante/trilha");
 }
 
 export async function registrarCaso(casoId: number, acertos: number, total: number) {
   const s = await exigirLigante();
   await db().prepare("INSERT INTO casos_resultados (caso_id, user_id, acertos, total) VALUES (?, ?, ?, ?)").run(casoId, s.id, acertos, total);
+  await registrarAcao(s.id, "caso_clinico_resolvido", `#${casoId}: ${acertos}/${total}`);
 }

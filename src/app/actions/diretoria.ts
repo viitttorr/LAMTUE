@@ -227,21 +227,48 @@ export async function moderarQuestao(formData: FormData) {
   revalidatePath("/diretoria/questoes");
 }
 
-/* ── Casos clínicos ────────────────────────────── */
-export async function salvarCaso(formData: FormData) {
+/**
+ * Importação em massa de questões via CSV. Colunas:
+ * tema;dificuldade;enunciado;alt_a;alt_b;alt_c;alt_d;correta;comentario
+ * "correta" aceita A/B/C/D ou 0-3. Entram já aprovadas (origem manual).
+ */
+export async function importarQuestoes(formData: FormData) {
   const s = await exigirDiretoria();
-  const id = Number(formData.get("id") || 0);
-  const titulo = String(formData.get("titulo") || "").trim();
-  const tema = String(formData.get("tema") || "");
-  const contexto = String(formData.get("contexto") || "").trim();
-  const visibilidade = String(formData.get("visibilidade") || "ligantes");
-  const etapasRaw = String(formData.get("etapas") || "");
-  if (!titulo || !tema || !contexto) redirect("/diretoria/casos?erro=" + encodeURIComponent("Preencha título, tema e cenário."));
-  /* Formato de texto:
-     ? Pergunta da etapa
-     * opção correta | feedback
-     - opção errada | feedback            */
-  const etapas: { pergunta: string; opcoes: { texto: string; correta: boolean; feedback: string }[] }[] = [];
+  const file = formData.get("csv") as File | null;
+  if (!file || file.size === 0) redirect("/diretoria/questoes?erro=" + encodeURIComponent("Envie um arquivo CSV."));
+  const texto = Buffer.from(await file!.arrayBuffer()).toString("utf-8").replace(/^﻿/, "");
+  const linhas = texto.split(/\r?\n/).filter((l) => l.trim());
+  let importadas = 0, ignoradas = 0;
+  const ins = db().prepare(
+    "INSERT INTO questoes (tema, dificuldade, enunciado, alternativas, correta, comentario, origem, aprovada) VALUES (?,?,?,?,?,?,'manual',1)"
+  );
+  for (const [i, linha] of linhas.entries()) {
+    const cols = linha.split(";").map((c) => c.trim().replace(/^"|"$/g, ""));
+    if (i === 0 && /tema/i.test(cols[0])) continue; // cabeçalho
+    const [tema, dificuldade, enunciado, altA, altB, altC, altD, corretaRaw, comentario = ""] = cols;
+    const alternativas = [altA, altB, altC, altD].map((a) => (a || "").trim());
+    if (!tema || !enunciado || alternativas.some((a) => !a)) { ignoradas++; continue; }
+    const letra = (corretaRaw || "").trim().toUpperCase();
+    const correta = "ABCD".includes(letra) ? "ABCD".indexOf(letra) : Math.max(0, Math.min(3, Number(corretaRaw) || 0));
+    try {
+      await ins.run(tema, ["facil", "media", "dificil"].includes(dificuldade) ? dificuldade : "media", enunciado, JSON.stringify(alternativas), correta, comentario.trim());
+      importadas++;
+    } catch { ignoradas++; }
+  }
+  await registrarAcao(s.id, "questoes_importadas", `${importadas} importadas, ${ignoradas} ignoradas`);
+  revalidatePath("/diretoria/questoes");
+  redirect("/diretoria/questoes?ok=" + encodeURIComponent(`${importadas} questão(ões) importada(s), ${ignoradas} ignorada(s).`));
+}
+
+/* ── Casos clínicos ────────────────────────────── */
+type Etapa = { pergunta: string; opcoes: { texto: string; correta: boolean; feedback: string }[] };
+
+/* Formato de texto das etapas:
+   ? Pergunta da etapa
+   * opção correta | feedback
+   - opção errada | feedback            */
+function parseEtapas(etapasRaw: string): Etapa[] {
+  const etapas: Etapa[] = [];
   for (const linhaBruta of etapasRaw.split("\n")) {
     const linha = linhaBruta.trim();
     if (!linha) continue;
@@ -252,8 +279,23 @@ export async function salvarCaso(formData: FormData) {
       if (texto) etapas[etapas.length - 1].opcoes.push({ texto, correta: linha.startsWith("*"), feedback });
     }
   }
-  const valido = etapas.length > 0 && etapas.every((e) => e.pergunta && e.opcoes.length >= 2 && e.opcoes.some((o) => o.correta));
-  if (!valido)
+  return etapas;
+}
+function etapasValidas(etapas: Etapa[]) {
+  return etapas.length > 0 && etapas.every((e) => e.pergunta && e.opcoes.length >= 2 && e.opcoes.some((o) => o.correta));
+}
+
+export async function salvarCaso(formData: FormData) {
+  const s = await exigirDiretoria();
+  const id = Number(formData.get("id") || 0);
+  const titulo = String(formData.get("titulo") || "").trim();
+  const tema = String(formData.get("tema") || "");
+  const contexto = String(formData.get("contexto") || "").trim();
+  const visibilidade = String(formData.get("visibilidade") || "ligantes");
+  const etapasRaw = String(formData.get("etapas") || "");
+  if (!titulo || !tema || !contexto) redirect("/diretoria/casos?erro=" + encodeURIComponent("Preencha título, tema e cenário."));
+  const etapas = parseEtapas(etapasRaw);
+  if (!etapasValidas(etapas))
     redirect("/diretoria/casos?erro=" + encodeURIComponent("Estrutura de etapas inválida: cada etapa precisa de uma pergunta (linha com ?) e ao menos 2 opções (linhas com * ou -), sendo 1 correta (*)."));
   if (id) {
     await db().prepare("UPDATE casos SET titulo=?, tema=?, contexto=?, etapas=?, visibilidade=? WHERE id=?")
@@ -266,6 +308,48 @@ export async function salvarCaso(formData: FormData) {
   }
   revalidatePath("/diretoria/casos");
   redirect("/diretoria/casos?ok=1");
+}
+
+/**
+ * Importação em massa de casos clínicos via arquivo de texto. Vários casos
+ * no mesmo arquivo, separados por uma linha "===". Cada bloco:
+ * TITULO: ...
+ * TEMA: ...
+ * VISIBILIDADE: ligantes|publico   (opcional, padrão ligantes)
+ * CENARIO: ...  (pode ocupar várias linhas até a linha ETAPAS:)
+ * ETAPAS:
+ * ? Pergunta
+ * * opção correta | feedback
+ * - opção errada | feedback
+ */
+export async function importarCasos(formData: FormData) {
+  const s = await exigirDiretoria();
+  const file = formData.get("txt") as File | null;
+  if (!file || file.size === 0) redirect("/diretoria/casos?erro=" + encodeURIComponent("Envie um arquivo de texto."));
+  const texto = Buffer.from(await file!.arrayBuffer()).toString("utf-8").replace(/^﻿/, "");
+  const blocos = texto.split(/^===+\s*$/m).map((b) => b.trim()).filter(Boolean);
+  let importados = 0, ignorados = 0;
+  const ins = db().prepare("INSERT INTO casos (titulo, tema, contexto, etapas, visibilidade) VALUES (?,?,?,?,?)");
+  for (const bloco of blocos) {
+    const mTitulo = bloco.match(/^TITULO:\s*(.+)$/im);
+    const mTema = bloco.match(/^TEMA:\s*(.+)$/im);
+    const mVis = bloco.match(/^VISIBILIDADE:\s*(.+)$/im);
+    const mCenario = bloco.match(/^CENARIO:\s*([\s\S]*?)(?=^ETAPAS:\s*$)/im);
+    const mEtapas = bloco.match(/^ETAPAS:\s*\n([\s\S]*)$/im);
+    const titulo = mTitulo?.[1].trim() || "";
+    const tema = mTema?.[1].trim() || "";
+    const contexto = mCenario?.[1].trim() || "";
+    const visibilidade = mVis?.[1].trim().toLowerCase() === "publico" ? "publico" : "ligantes";
+    const etapas = mEtapas ? parseEtapas(mEtapas[1]) : [];
+    if (!titulo || !tema || !contexto || !etapasValidas(etapas)) { ignorados++; continue; }
+    try {
+      await ins.run(titulo, tema, contexto, JSON.stringify(etapas), visibilidade);
+      importados++;
+    } catch { ignorados++; }
+  }
+  await registrarAcao(s.id, "casos_importados", `${importados} importados, ${ignorados} ignorados`);
+  revalidatePath("/diretoria/casos");
+  redirect("/diretoria/casos?ok=" + encodeURIComponent(`${importados} caso(s) importado(s), ${ignorados} ignorado(s).`));
 }
 
 export async function excluirCaso(formData: FormData) {

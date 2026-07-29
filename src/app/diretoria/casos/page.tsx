@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { exigirDiretoria } from "@/lib/auth";
 import { db, TEMAS } from "@/lib/db";
-import { salvarCaso, excluirCaso } from "@/app/actions/diretoria";
+import { salvarCaso, excluirCaso, importarCasos } from "@/app/actions/diretoria";
 import TemaSelect from "@/components/TemaSelect";
 
 const EXEMPLO = `? Qual a primeira conduta na avaliação primária?
@@ -56,6 +56,31 @@ export default async function CasosAdminPage({ searchParams }: { searchParams: P
             Após <code>|</code>, o feedback exibido ao ligante.
           </p>
           <button className="btn btn-primary btn-sm mt-2" type="submit">Salvar caso</button>
+        </form>
+      </div>
+
+      <div className="card mb-3">
+        <h3 style={{ fontSize: 16 }}>Importar casos em massa (arquivo de texto)</h3>
+        <p className="small mt-1">
+          Vários casos no mesmo arquivo, separados por uma linha <code>===</code>. Cada bloco:
+        </p>
+        <pre className="small mt-1" style={{ background: "var(--bg-2)", padding: 10, borderRadius: 8, overflowX: "auto", fontSize: 12.5 }}>
+{`TITULO: Nome do caso
+TEMA: ${TEMAS[0]}
+VISIBILIDADE: ligantes
+CENARIO: Homem, 34 anos, vítima de colisão...
+ETAPAS:
+? Qual a primeira conduta?
+* Opção correta | Feedback da correta
+- Opção errada | Feedback da errada
+===
+TITULO: Próximo caso
+...`}
+        </pre>
+        <form action={importarCasos}>
+          <label className="label">Arquivo de texto (.txt)</label>
+          <input className="input" type="file" name="txt" accept=".txt,text/plain" required />
+          <button className="btn btn-blue btn-sm mt-2" type="submit">Importar em massa</button>
         </form>
       </div>
 
