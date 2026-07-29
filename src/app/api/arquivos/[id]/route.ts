@@ -17,11 +17,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const foto = (await db().prepare(
     "SELECT a.visibilidade FROM galeria_fotos f JOIN galeria_albuns a ON a.id = f.album_id WHERE f.arquivo_id = ?"
   ).get(arquivoId)) as { visibilidade: string } | undefined;
+  const ehEdital = await db().prepare("SELECT id FROM seletivo WHERE edital_arquivo_id = ?").get(arquivoId);
 
   if (ehComprovante && sessao?.role !== "diretoria") return new Response("Acesso negado", { status: 403 });
   if (material && material.visibilidade !== "publico" && !sessao) return new Response("Acesso negado", { status: 403 });
   if (foto && foto.visibilidade !== "publico" && !sessao) return new Response("Acesso negado", { status: 403 });
-  if (!ehComprovante && !material && !ehExtensao && !foto && !sessao) return new Response("Acesso negado", { status: 403 });
+  if (!ehComprovante && !material && !ehExtensao && !foto && !ehEdital && !sessao) return new Response("Acesso negado", { status: 403 });
 
   const f = await lerArquivo(arquivoId);
   if (!f) return new Response("Arquivo não encontrado", { status: 404 });

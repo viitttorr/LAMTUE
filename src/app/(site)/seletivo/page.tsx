@@ -52,6 +52,7 @@ export default async function SeletivoPage({ searchParams }: { searchParams: Pro
   const { ok, erro } = await searchParams;
   const sel = (await db().prepare("SELECT * FROM seletivo WHERE id = 1").get()) as {
     ativo: number; vagas: number; prazo: string | null; taxa_centavos: number; edital: string | null; cronograma: string | null;
+    edital_arquivo_id: number | null;
   };
   const inscritos = ((await db().prepare("SELECT COUNT(*) AS n FROM inscricoes").get()) as { n: number }).n;
   const cronograma: { etapa: string; data: string }[] = sel.cronograma ? JSON.parse(sel.cronograma) : [];
@@ -80,11 +81,16 @@ export default async function SeletivoPage({ searchParams }: { searchParams: Pro
 
           <div className="grid2 mt-3" style={{ alignItems: "start" }}>
             <div>
-              {sel.edital && (
+              {(sel.edital || sel.edital_arquivo_id) && (
                 <Reveal>
                   <div className="card">
                     <h3 style={{ fontSize: 18, marginBottom: 10 }}>Edital</h3>
-                    <p className="muted" style={{ whiteSpace: "pre-line", fontSize: 14.5 }}>{sel.edital}</p>
+                    {sel.edital && <p className="muted" style={{ whiteSpace: "pre-line", fontSize: 14.5 }}>{sel.edital}</p>}
+                    {sel.edital_arquivo_id && (
+                      <a className="btn btn-sm mt-2" href={`/api/arquivos/${sel.edital_arquivo_id}`} target="_blank" rel="noreferrer">
+                        ⬇ Baixar edital em PDF
+                      </a>
+                    )}
                   </div>
                 </Reveal>
               )}

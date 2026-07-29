@@ -14,6 +14,10 @@ export default async function CandidatoPage() {
   const insc = (await db().prepare("SELECT status, criado_em FROM inscricoes WHERE user_id = ?").get(s.id)) as
     | { status: string; criado_em: string }
     | undefined;
+  const sel = (await db().prepare("SELECT edital_arquivo_id, cronograma FROM seletivo WHERE id = 1").get()) as
+    | { edital_arquivo_id: number | null; cronograma: string | null }
+    | undefined;
+  const cronograma: { etapa: string; data: string }[] = sel?.cronograma ? JSON.parse(sel.cronograma) : [];
 
   return (
     <div style={{ maxWidth: 560, margin: "0 auto" }}>
@@ -29,6 +33,27 @@ export default async function CandidatoPage() {
             <span className={`badge ${STATUS_LABEL[insc.status]?.badge ?? ""}`}>{STATUS_LABEL[insc.status]?.label ?? insc.status}</span>
           </div>
           <p className="mt-2" style={{ fontSize: 15 }}>{MENSAGEM_STATUS[insc.status] ?? "Acompanhe seu e-mail e WhatsApp para novidades."}</p>
+        </div>
+      )}
+
+      {sel?.edital_arquivo_id && (
+        <div className="card mt-2">
+          <h3 style={{ fontSize: 16 }}>Edital</h3>
+          <a className="btn btn-sm mt-2" href={`/api/arquivos/${sel.edital_arquivo_id}`} target="_blank" rel="noreferrer">
+            ⬇ Baixar edital em PDF
+          </a>
+        </div>
+      )}
+
+      {cronograma.length > 0 && (
+        <div className="card mt-2">
+          <h3 style={{ fontSize: 16, marginBottom: 10 }}>Cronograma</h3>
+          {cronograma.map((c, i) => (
+            <div key={i} className="flex-between" style={{ padding: "10px 0", borderBottom: i < cronograma.length - 1 ? "1px solid var(--border)" : "none" }}>
+              <span style={{ fontSize: 14.5 }}>{c.etapa}</span>
+              <span className="badge badge-blue">{fmtData(c.data)}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -289,13 +289,34 @@ export async function salvarSeletivo(formData: FormData) {
     const [etapa, data] = l.split("|").map((p) => p.trim());
     return { etapa, data: data || "" };
   });
-  await db().prepare("UPDATE seletivo SET ativo=?, vagas=?, prazo=?, taxa_centavos=?, edital=?, cronograma=? WHERE id=1")
-    .run(ativo, vagas, prazo, taxa, edital, JSON.stringify(cronograma));
+
+  let editalArquivoId: number | null = null;
+  try {
+    editalArquivoId = await salvarArquivo(formData.get("edital_pdf") as File | null);
+  } catch (e) {
+    redirect("/diretoria/seletivo?erro=" + encodeURIComponent(e instanceof Error ? e.message : "Falha no upload do edital."));
+  }
+  if (!editalArquivoId) {
+    const atual = (await db().prepare("SELECT edital_arquivo_id FROM seletivo WHERE id=1").get()) as { edital_arquivo_id: number | null } | undefined;
+    editalArquivoId = atual?.edital_arquivo_id ?? null;
+  }
+
+  await db().prepare("UPDATE seletivo SET ativo=?, vagas=?, prazo=?, taxa_centavos=?, edital=?, cronograma=?, edital_arquivo_id=? WHERE id=1")
+    .run(ativo, vagas, prazo, taxa, edital, JSON.stringify(cronograma), editalArquivoId);
   await registrarAcao(s.id, "seletivo_configurado", `ativo=${ativo}, vagas=${vagas}, prazo=${prazo}`);
   revalidatePath("/diretoria/seletivo");
   revalidatePath("/seletivo");
+  revalidatePath("/candidato");
   revalidatePath("/");
   redirect("/diretoria/seletivo?ok=1");
+}
+
+export async function excluirInscricao(formData: FormData) {
+  const s = await exigirDiretoria();
+  const id = Number(formData.get("id"));
+  await db().prepare("DELETE FROM inscricoes WHERE id = ?").run(id);
+  await registrarAcao(s.id, "inscricao_excluida", `#${id}`);
+  revalidatePath("/diretoria/seletivo");
 }
 
 /**
