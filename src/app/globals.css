@@ -150,6 +150,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 @media (max-width: 980px) { .grid4 { grid-template-columns: repeat(2, 1fr); } .grid3 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .grid2, .grid3, .grid4 { grid-template-columns: 1fr; } }
 
+/* ── Visibilidade responsiva (mesmo corte do grid2) ── */
+.only-desktop { display: block; }
+.only-mobile { display: none; }
+@media (max-width: 640px) {
+  .only-desktop { display: none; }
+  .only-mobile { display: block; }
+}
+
 /* ── Stat / KPI ───────────────────────────────── */
 .stat { padding: 22px 24px; }
 .stat .stat-num { font: 700 34px var(--font-display); letter-spacing: -0.02em; }

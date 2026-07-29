@@ -319,6 +319,26 @@ export async function excluirInscricao(formData: FormData) {
   revalidatePath("/diretoria/seletivo");
 }
 
+/** Gabarito da prova do seletivo — 21 questões. 0 = ainda não lançado. */
+export async function salvarAcertos(formData: FormData) {
+  const s = await exigirDiretoria();
+  const id = Number(formData.get("id"));
+  const acertos = Math.max(0, Math.min(21, Number(formData.get("acertos")) || 0));
+  await db().prepare("UPDATE inscricoes SET acertos = ? WHERE id = ?").run(acertos, id);
+  await registrarAcao(s.id, "inscricao_acertos_lancados", `#${id} → ${acertos}/21`);
+  revalidatePath("/diretoria/seletivo");
+  revalidatePath("/candidato");
+}
+
+export async function removerEditalPdf() {
+  const s = await exigirDiretoria();
+  await db().prepare("UPDATE seletivo SET edital_arquivo_id = NULL WHERE id = 1").run();
+  await registrarAcao(s.id, "edital_pdf_removido");
+  revalidatePath("/diretoria/seletivo");
+  revalidatePath("/seletivo");
+  revalidatePath("/candidato");
+}
+
 /**
  * Importação em massa de candidatos — para inscrições recebidas fora do
  * formulário público (ex.: planilha de outro canal). Colunas:

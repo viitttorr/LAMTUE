@@ -6,6 +6,7 @@ import Countdown from "@/components/Countdown";
 import Counter from "@/components/Counter";
 import Reveal from "@/components/Reveal";
 import PageHeader from "@/components/PageHeader";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -58,16 +59,31 @@ export default async function SeletivoPage({ searchParams }: { searchParams: Pro
   const cronograma: { etapa: string; data: string }[] = sel.cronograma ? JSON.parse(sel.cronograma) : [];
   const encerrado = sel.prazo ? new Date(sel.prazo + "T23:59:59") < new Date() : false;
 
+  const acompanharCTA = (
+    <div className="card" style={{ borderColor: "rgba(56,189,248,0.3)" }}>
+      <div className="flex-between" style={{ flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <strong style={{ fontFamily: "var(--font-display)" }}>Já se inscreveu?</strong>
+          <p className="small mt-1">Acompanhe o status da sua inscrição, o gabarito e o resultado na sua área exclusiva.</p>
+        </div>
+        <Link href="/login" className="btn btn-blue btn-sm">Acompanhar inscrição →</Link>
+      </div>
+    </div>
+  );
+
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>
       <div className="page-panel">
       <PageHeader eyebrow="Ingresso na liga" titulo="Processo Seletivo" />
 
       {!sel.ativo ? (
-        <div className="alert alert-blue" style={{ maxWidth: 640 }}>
-          Não há processo seletivo aberto no momento. Acompanhe nossas redes e este portal — o
-          próximo edital será publicado aqui.
-        </div>
+        <>
+          <div className="alert alert-blue" style={{ maxWidth: 640 }}>
+            Não há processo seletivo aberto no momento. Acompanhe nossas redes e este portal — o
+            próximo edital será publicado aqui.
+          </div>
+          <div style={{ maxWidth: 640 }}>{acompanharCTA}</div>
+        </>
       ) : (
         <>
           <Reveal>
@@ -81,6 +97,7 @@ export default async function SeletivoPage({ searchParams }: { searchParams: Pro
 
           <div className="grid2 mt-3" style={{ alignItems: "start" }}>
             <div>
+              <div className="only-desktop mb-2">{acompanharCTA}</div>
               {(sel.edital || sel.edital_arquivo_id) && (
                 <Reveal>
                   <div className="card">
@@ -148,6 +165,8 @@ export default async function SeletivoPage({ searchParams }: { searchParams: Pro
               </div>
             </Reveal>
           </div>
+
+          <div className="only-mobile mt-2">{acompanharCTA}</div>
         </>
       )}
       </div>

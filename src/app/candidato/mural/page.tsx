@@ -1,7 +1,7 @@
 import { exigirCandidato } from "@/lib/auth";
-import BloqueadoSeletivo from "@/components/BloqueadoSeletivo";
+import MuralConteudo from "@/components/MuralConteudo";
 
 export default async function CandidatoMuralPage() {
   await exigirCandidato();
-  return <BloqueadoSeletivo />;
+  return <MuralConteudo />;
 }

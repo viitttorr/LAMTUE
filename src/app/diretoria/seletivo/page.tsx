@@ -1,6 +1,6 @@
 import { exigirDiretoria } from "@/lib/auth";
 import { db, STATUS_LABEL } from "@/lib/db";
-import { salvarSeletivo, alterarStatusInscricao, enviarResultados, matricularAprovados, reenviarConfirmacao, criarContaCandidato, importarInscritos, excluirInscricao } from "@/app/actions/diretoria";
+import { salvarSeletivo, alterarStatusInscricao, enviarResultados, matricularAprovados, reenviarConfirmacao, criarContaCandidato, importarInscritos, excluirInscricao, salvarAcertos, removerEditalPdf } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
 
 export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
@@ -13,6 +13,7 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
   const inscritos = (await db().prepare("SELECT * FROM inscricoes ORDER BY criado_em DESC").all()) as {
     id: number; nome: string; matricula: string; semestre: string; email: string; telefone: string;
     comprovante_id: number | null; status: string; criado_em: string; user_id: number | null; turma: string | null;
+    acertos: number;
   }[];
   const porStatus = (st: string) => inscritos.filter((i) => i.status === st).length;
   const cronogramaTexto = sel.cronograma
@@ -51,12 +52,29 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
           <label className="label">Edital (texto exibido na página pública)</label>
           <textarea className="input" name="edital" rows={5} defaultValue={sel.edital ?? ""} />
           <label className="label">Edital em PDF (disponível para download público e na área do candidato)</label>
-          <div className="flex" style={{ gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <input className="input" type="file" name="edital_pdf" accept=".pdf,application/pdf" style={{ flex: 1, minWidth: 220 }} />
-            {sel.edital_arquivo_id && (
-              <a className="btn btn-sm" href={`/api/arquivos/${sel.edital_arquivo_id}`} target="_blank" rel="noreferrer">Ver PDF atual</a>
-            )}
-          </div>
+          {sel.edital_arquivo_id && (
+            <div className="flex mb-1" style={{ gap: 8, alignItems: "center" }}>
+              <a
+                className="btn btn-sm"
+                href={`/api/arquivos/${sel.edital_arquivo_id}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
+                📄 Edital atual (PDF)
+              </a>
+              <button
+                type="submit"
+                formAction={removerEditalPdf}
+                className="btn btn-sm btn-danger"
+                title="Remover PDF atual"
+                style={{ padding: "6px 10px" }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <input className="input" type="file" name="edital_pdf" accept=".pdf,application/pdf" />
           <p className="small mt-1">Envie um novo arquivo para substituir; deixe em branco para manter o atual.</p>
           <label className="label">Cronograma — uma etapa por linha: <code>Etapa | AAAA-MM-DD</code></label>
           <textarea className="input" name="cron_etapas" rows={4} defaultValue={cronogramaTexto} placeholder={"Inscrições | 2026-08-01\nProva teórica | 2026-08-15\nResultado final | 2026-08-20"} />
@@ -97,9 +115,9 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
       <h3 style={{ fontSize: 17, margin: "10px 0 12px" }}>Inscritos em tempo real</h3>
       <div className="table-wrap">
         <table className="tbl">
-          <thead><tr><th>Candidato</th><th>Matrícula</th><th>Sem.</th><th>Contato</th><th>Comprovante</th><th>Inscrição</th><th>Status</th><th>Conta</th><th></th></tr></thead>
+          <thead><tr><th>Candidato</th><th>Matrícula</th><th>Sem.</th><th>Contato</th><th>Comprovante</th><th>Inscrição</th><th>Status</th><th>Gabarito (21)</th><th>Conta</th><th></th></tr></thead>
           <tbody>
-            {inscritos.length === 0 && <tr><td colSpan={9} className="muted">Nenhuma inscrição recebida.</td></tr>}
+            {inscritos.length === 0 && <tr><td colSpan={10} className="muted">Nenhuma inscrição recebida.</td></tr>}
             {inscritos.map((i) => (
               <tr key={i.id}>
                 <td><strong>{i.nome}</strong></td>
@@ -126,6 +144,21 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
                       <button className="btn btn-sm btn-ghost" type="submit" title="Reenviar e-mail de confirmação">✉</button>
                     </form>
                   </div>
+                </td>
+                <td>
+                  <form action={salvarAcertos} className="flex" style={{ gap: 6 }}>
+                    <input type="hidden" name="id" value={i.id} />
+                    <input
+                      className="input"
+                      type="number"
+                      name="acertos"
+                      min={0}
+                      max={21}
+                      defaultValue={i.acertos}
+                      style={{ width: 60, padding: "6px 8px", fontSize: 13 }}
+                    />
+                    <button className="btn btn-sm" type="submit">OK</button>
+                  </form>
                 </td>
                 <td>
                   {i.user_id ? (

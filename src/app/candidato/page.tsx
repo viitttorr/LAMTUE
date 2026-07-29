@@ -11,8 +11,8 @@ const MENSAGEM_STATUS: Record<string, string> = {
 
 export default async function CandidatoPage() {
   const s = await exigirCandidato();
-  const insc = (await db().prepare("SELECT status, criado_em FROM inscricoes WHERE user_id = ?").get(s.id)) as
-    | { status: string; criado_em: string }
+  const insc = (await db().prepare("SELECT status, criado_em, acertos FROM inscricoes WHERE user_id = ?").get(s.id)) as
+    | { status: string; criado_em: string; acertos: number }
     | undefined;
   const sel = (await db().prepare("SELECT edital_arquivo_id, cronograma FROM seletivo WHERE id = 1").get()) as
     | { edital_arquivo_id: number | null; cronograma: string | null }
@@ -33,6 +33,20 @@ export default async function CandidatoPage() {
             <span className={`badge ${STATUS_LABEL[insc.status]?.badge ?? ""}`}>{STATUS_LABEL[insc.status]?.label ?? insc.status}</span>
           </div>
           <p className="mt-2" style={{ fontSize: 15 }}>{MENSAGEM_STATUS[insc.status] ?? "Acompanhe seu e-mail e WhatsApp para novidades."}</p>
+        </div>
+      )}
+
+      {insc && (
+        <div className="card mt-2">
+          <h3 style={{ fontSize: 16 }}>Gabarito da prova</h3>
+          {insc.acertos > 0 ? (
+            <div className="mt-2">
+              <div className="stat-num" style={{ fontSize: 30, color: "var(--blue)" }}>{insc.acertos}/21</div>
+              <p className="small mt-1">{Math.round((insc.acertos / 21) * 100)}% de acerto</p>
+            </div>
+          ) : (
+            <p className="muted mt-2" style={{ fontSize: 14.5 }}>Resultados ainda não liberados.</p>
+          )}
         </div>
       )}
 
