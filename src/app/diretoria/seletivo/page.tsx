@@ -1,6 +1,6 @@
 import { exigirDiretoria } from "@/lib/auth";
 import { db, STATUS_LABEL } from "@/lib/db";
-import { salvarSeletivo, alterarStatusInscricao, enviarResultados, matricularAprovados, reenviarConfirmacao, criarContaCandidato } from "@/app/actions/diretoria";
+import { salvarSeletivo, alterarStatusInscricao, enviarResultados, matricularAprovados, reenviarConfirmacao, criarContaCandidato, importarInscritos } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
 
 export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
@@ -11,7 +11,7 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
   };
   const inscritos = (await db().prepare("SELECT * FROM inscricoes ORDER BY criado_em DESC").all()) as {
     id: number; nome: string; matricula: string; semestre: string; email: string; telefone: string;
-    comprovante_id: number | null; status: string; criado_em: string; user_id: number | null;
+    comprovante_id: number | null; status: string; criado_em: string; user_id: number | null; turma: string | null;
   }[];
   const porStatus = (st: string) => inscritos.filter((i) => i.status === st).length;
   const cronogramaTexto = sel.cronograma
@@ -71,6 +71,20 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
         </div>
       </div>
 
+      <div className="card mb-3">
+        <h3 style={{ fontSize: 16 }}>Importar candidatos (CSV)</h3>
+        <p className="small mt-1">
+          Para inscrições recebidas fora do formulário público. Colunas: <code>nome;email;matricula;telefone;turma</code> —
+          separadas por <code>;</code> ou <code>,</code>, uma linha por candidato (cabeçalho opcional). O semestre é calculado
+          automaticamente a partir da turma.
+        </p>
+        <form action={importarInscritos}>
+          <label className="label">Arquivo CSV</label>
+          <input className="input" type="file" name="csv" accept=".csv,text/csv" required />
+          <button className="btn btn-blue btn-sm mt-2" type="submit">Importar em massa</button>
+        </form>
+      </div>
+
       <h3 style={{ fontSize: 17, margin: "10px 0 12px" }}>Inscritos em tempo real</h3>
       <div className="table-wrap">
         <table className="tbl">
@@ -81,7 +95,7 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
               <tr key={i.id}>
                 <td><strong>{i.nome}</strong></td>
                 <td className="muted">{i.matricula}</td>
-                <td className="muted">{i.semestre}</td>
+                <td className="muted">{i.turma ? `${i.turma} · ${i.semestre}` : i.semestre}</td>
                 <td className="muted" style={{ fontSize: 13 }}>{i.email}<br />{i.telefone}</td>
                 <td>
                   {i.comprovante_id

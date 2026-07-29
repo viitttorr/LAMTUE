@@ -9,6 +9,7 @@ import { enviarEmail } from "@/lib/mailer";
 import { waIniciar, waDesconectar } from "@/lib/whatsapp";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { calcularSemestre } from "@/lib/util";
 
 /* ── Aulas ─────────────────────────────────────── */
 export async function salvarAula(formData: FormData) {
@@ -295,6 +296,39 @@ export async function salvarSeletivo(formData: FormData) {
   revalidatePath("/seletivo");
   revalidatePath("/");
   redirect("/diretoria/seletivo?ok=1");
+}
+
+/**
+ * Importação em massa de candidatos — para inscrições recebidas fora do
+ * formulário público (ex.: planilha de outro canal). Colunas:
+ * nome;email;matricula;telefone;turma. O semestre é calculado a partir da
+ * turma, mesma convenção usada para ligantes.
+ */
+export async function importarInscritos(formData: FormData) {
+  const s = await exigirDiretoria();
+  const file = formData.get("csv") as File | null;
+  if (!file || file.size === 0) redirect("/diretoria/seletivo?erro=" + encodeURIComponent("Envie um arquivo CSV."));
+  const texto = Buffer.from(await file!.arrayBuffer()).toString("utf-8").replace(/^﻿/, "");
+  const linhas = texto.split(/\r?\n/).filter((l) => l.trim());
+  const periodoAtual = await getConfig("periodo_atual", "2026/2");
+  let importados = 0, ignorados = 0;
+  const ins = db().prepare(
+    "INSERT INTO inscricoes (nome, matricula, semestre, email, telefone, turma) VALUES (?,?,?,?,?,?)"
+  );
+  for (const [i, linha] of linhas.entries()) {
+    const cols = linha.split(/[;,]/).map((c) => c.trim().replace(/^"|"$/g, ""));
+    if (i === 0 && /nome/i.test(cols[0])) continue; // cabeçalho
+    const [nome, email, matricula, telefone, turma] = cols;
+    if (!nome || !email || !matricula || !telefone) { ignorados++; continue; }
+    const semestre = calcularSemestre(turma, periodoAtual) ?? "—";
+    try {
+      await ins.run(nome, matricula, semestre, email.toLowerCase(), telefone, turma || null);
+      importados++;
+    } catch { ignorados++; }
+  }
+  await registrarAcao(s.id, "inscritos_importados", `${importados} importados, ${ignorados} ignorados`);
+  revalidatePath("/diretoria/seletivo");
+  redirect("/diretoria/seletivo?ok=" + encodeURIComponent(`${importados} candidato(s) importado(s), ${ignorados} ignorado(s).`));
 }
 
 export async function alterarStatusInscricao(formData: FormData) {
