@@ -6,6 +6,20 @@ import { redirect } from "next/navigation";
 const SECRET = process.env.SESSION_SECRET || "lamtue-dev-secret";
 const COOKIE = "lamtue_session";
 
+/**
+ * Custo do bcrypt. No plano Workers Free, o limite de CPU é 10ms por
+ * requisição — bcryptjs (implementação pura em JS, sem binário nativo) em
+ * custo 10 sozinho já pode estourar isso, causando Error 1102 no login.
+ * Custo 8 (4× mais rápido) ainda é adequado para senhas iniciais = matrícula.
+ */
+export const BCRYPT_COST = 8;
+
+/** Extrai o custo embutido num hash bcrypt ("$2a$10$..." → 10). */
+export function custoDoHash(hash: string): number {
+  const partes = hash.split("$");
+  return Number(partes[2]) || 0;
+}
+
 export type Sessao = {
   id: number;
   nome: string;

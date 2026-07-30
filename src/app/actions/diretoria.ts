@@ -1,7 +1,7 @@
 "use server";
 import bcrypt from "bcryptjs";
 import { db, getConfig, setConfig } from "@/lib/db";
-import { exigirDiretoria, podeVerFinanceiro, exigirGaleria, exigirPresidente } from "@/lib/auth";
+import { exigirDiretoria, podeVerFinanceiro, exigirGaleria, exigirPresidente, BCRYPT_COST } from "@/lib/auth";
 import { registrarAcao } from "@/lib/audit";
 import { salvarArquivo, MATERIAIS_MAX_BYTES } from "@/lib/arquivos";
 import { notificar, notificarLigantes } from "@/lib/notify";
@@ -108,7 +108,7 @@ export async function salvarMembro(formData: FormData) {
       // credencial temporária = matrícula (troca obrigatória no 1º login)
       await db().prepare(
         "INSERT INTO users (nome, matricula, email, telefone, turma, cargo, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,?,?,1)"
-      ).run(nome, matricula, email, telefone, turma, cargo, bcrypt.hashSync(matricula, 10), role);
+      ).run(nome, matricula, email, telefone, turma, cargo, bcrypt.hashSync(matricula, BCRYPT_COST), role);
       await registrarAcao(s.id, "membro_cadastrado", `${nome} (${matricula}) — ${role}`);
     }
   } catch {
@@ -134,7 +134,7 @@ export async function importarLigantes(formData: FormData) {
     const [nome, matricula, email, telefone, turma] = cols;
     if (!nome || !matricula) { ignorados++; continue; }
     try {
-      await ins.run(nome, matricula, email?.toLowerCase() || null, telefone || null, turma || null, bcrypt.hashSync(matricula, 10));
+      await ins.run(nome, matricula, email?.toLowerCase() || null, telefone || null, turma || null, bcrypt.hashSync(matricula, BCRYPT_COST));
       importados++;
     } catch { ignorados++; }
   }
@@ -159,7 +159,7 @@ export async function redefinirSenhaMembro(formData: FormData) {
     { matricula: string | null } | undefined;
   if (!membro?.matricula) redirect("/diretoria/ligantes?erro=" + encodeURIComponent("Conta sem matrícula definida."));
   await db().prepare("UPDATE users SET senha_hash = ?, must_change_password = 1 WHERE id = ?")
-    .run(bcrypt.hashSync(membro.matricula, 10), id);
+    .run(bcrypt.hashSync(membro.matricula, BCRYPT_COST), id);
   await registrarAcao(s.id, "membro_senha_redefinida", `#${id}`);
   revalidatePath("/diretoria/ligantes");
   redirect("/diretoria/ligantes?ok=" + encodeURIComponent("Senha redefinida para a matrícula. O usuário deverá trocá-la no próximo acesso."));
@@ -481,7 +481,7 @@ export async function criarContaCandidato(formData: FormData) {
   try {
     const r = await db().prepare(
       "INSERT INTO users (nome, matricula, email, telefone, semestre, senha_hash, role, must_change_password) VALUES (?,?,?,?,?,?,'candidato',1)"
-    ).run(insc.nome, insc.matricula, insc.email.toLowerCase(), insc.telefone, insc.semestre, bcrypt.hashSync(insc.matricula, 10));
+    ).run(insc.nome, insc.matricula, insc.email.toLowerCase(), insc.telefone, insc.semestre, bcrypt.hashSync(insc.matricula, BCRYPT_COST));
     await db().prepare("UPDATE inscricoes SET user_id = ? WHERE id = ?").run(r.lastInsertRowid, id);
     await registrarAcao(s.id, "candidato_conta_criada", `#${id} ${insc.nome}`);
   } catch {
@@ -539,7 +539,7 @@ export async function matricularAprovados() {
       continue;
     }
     try {
-      const r = await ins.run(a.nome, a.matricula, a.email.toLowerCase(), a.telefone, a.semestre, bcrypt.hashSync(a.matricula, 10));
+      const r = await ins.run(a.nome, a.matricula, a.email.toLowerCase(), a.telefone, a.semestre, bcrypt.hashSync(a.matricula, BCRYPT_COST));
       await vincula.run(r.lastInsertRowid, a.id);
       criados++;
     } catch { /* já cadastrado */ }

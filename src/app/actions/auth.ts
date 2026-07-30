@@ -1,7 +1,7 @@
 "use server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { setSessionCookie, clearSession, getSessao } from "@/lib/auth";
+import { setSessionCookie, clearSession, getSessao, BCRYPT_COST, custoDoHash } from "@/lib/auth";
 import { registrarAcao } from "@/lib/audit";
 import { redirect } from "next/navigation";
 
@@ -20,6 +20,10 @@ export async function login(formData: FormData) {
     redirect("/login?erro=" + encodeURIComponent("Credenciais inválidas. Ligantes: no primeiro acesso, use a matrícula como senha."));
   if (!user.ativo)
     redirect("/login?erro=" + encodeURIComponent("Seu acesso está desativado. Fale com a diretoria."));
+
+  // Migração silenciosa de hashes antigos (custo mais alto) para o custo atual.
+  if (custoDoHash(user.senha_hash) > BCRYPT_COST)
+    await db().prepare("UPDATE users SET senha_hash = ? WHERE id = ?").run(bcrypt.hashSync(senha, BCRYPT_COST), user.id);
 
   await setSessionCookie(user.id);
   await registrarAcao(user.id, "login");
@@ -40,7 +44,7 @@ export async function trocarSenha(formData: FormData) {
   if (!bcrypt.compareSync(atual, row.senha_hash))
     redirect("/trocar-senha?erro=" + encodeURIComponent("Senha atual incorreta."));
 
-  await db().prepare("UPDATE users SET senha_hash = ?, must_change_password = 0 WHERE id = ?").run(bcrypt.hashSync(nova, 10), s.id);
+  await db().prepare("UPDATE users SET senha_hash = ?, must_change_password = 0 WHERE id = ?").run(bcrypt.hashSync(nova, BCRYPT_COST), s.id);
   await registrarAcao(s.id, "troca_senha");
   redirect(s.role === "diretoria" ? "/diretoria" : s.role === "candidato" ? "/candidato" : "/ligante");
 }
