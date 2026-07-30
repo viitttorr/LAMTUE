@@ -1,26 +1,21 @@
 import { exigirDiretoria } from "@/lib/auth";
 import { db, STATUS_LABEL } from "@/lib/db";
-import { salvarSeletivo, alterarStatusInscricao, enviarResultados, matricularAprovados, reenviarConfirmacao, criarContaCandidato, importarInscritos, excluirInscricao, salvarAcertos, removerEditalPdf } from "@/app/actions/diretoria";
-import { fmtData } from "@/lib/util";
-import Link from "next/link";
+import { salvarSeletivo, enviarResultados, matricularAprovados, importarInscritos, removerEditalPdf } from "@/app/actions/diretoria";
+import InscritosTable from "@/components/InscritosTable";
 
-export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string; q?: string }> }) {
+export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   await exigirDiretoria();
-  const { ok, erro, q } = await searchParams;
+  const { ok, erro } = await searchParams;
   const sel = (await db().prepare("SELECT * FROM seletivo WHERE id = 1").get()) as {
     ativo: number; vagas: number; prazo: string | null; taxa_centavos: number; edital: string | null; cronograma: string | null;
     edital_arquivo_id: number | null;
   };
-  const todosInscritos = (await db().prepare("SELECT * FROM inscricoes ORDER BY nome COLLATE NOCASE ASC").all()) as {
+  const inscritos = (await db().prepare("SELECT * FROM inscricoes ORDER BY nome COLLATE NOCASE ASC").all()) as {
     id: number; nome: string; matricula: string; semestre: string; email: string; telefone: string;
     comprovante_id: number | null; status: string; criado_em: string; user_id: number | null; turma: string | null;
     acertos: number;
   }[];
-  const busca = (q || "").trim().toLowerCase();
-  const inscritos = busca
-    ? todosInscritos.filter((i) => i.nome.toLowerCase().includes(busca) || i.matricula.toLowerCase().includes(busca))
-    : todosInscritos;
-  const porStatus = (st: string) => todosInscritos.filter((i) => i.status === st).length;
+  const porStatus = (st: string) => inscritos.filter((i) => i.status === st).length;
   const cronogramaTexto = sel.cronograma
     ? (JSON.parse(sel.cronograma) as { etapa: string; data: string }[]).map((c) => `${c.etapa} | ${c.data}`).join("\n")
     : "";
@@ -117,82 +112,7 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
         </form>
       </div>
 
-      <div className="flex-between" style={{ margin: "10px 0 12px", flexWrap: "wrap", gap: 10 }}>
-        <h3 style={{ fontSize: 17 }}>Inscritos em tempo real {busca && <span className="small muted">({inscritos.length} de {todosInscritos.length})</span>}</h3>
-        <form method="get" className="flex" style={{ gap: 8 }}>
-          <input className="input" type="text" name="q" defaultValue={q ?? ""} placeholder="Buscar por nome ou matrícula…" style={{ padding: "7px 12px", fontSize: 13.5, width: 240 }} />
-          <button className="btn btn-sm" type="submit">Filtrar</button>
-          {busca && <Link href="/diretoria/seletivo" className="btn btn-sm btn-ghost">Limpar</Link>}
-        </form>
-      </div>
-      <div className="table-wrap">
-        <table className="tbl">
-          <thead><tr><th>Candidato</th><th>Matrícula</th><th>Sem.</th><th>Contato</th><th>Comprovante</th><th>Inscrição</th><th>Status</th><th>Gabarito (21)</th><th>Conta</th><th></th></tr></thead>
-          <tbody>
-            {inscritos.length === 0 && <tr><td colSpan={10} className="muted">Nenhuma inscrição recebida.</td></tr>}
-            {inscritos.map((i) => (
-              <tr key={i.id}>
-                <td><strong>{i.nome}</strong></td>
-                <td className="muted">{i.matricula}</td>
-                <td className="muted">{i.turma ? `${i.turma} · ${i.semestre}` : i.semestre}</td>
-                <td className="muted" style={{ fontSize: 13 }}>{i.email}<br />{i.telefone}</td>
-                <td>
-                  {i.comprovante_id
-                    ? <a className="btn btn-sm" href={`/api/arquivos/${i.comprovante_id}`} target="_blank">Ver</a>
-                    : <span className="muted">—</span>}
-                </td>
-                <td className="muted" style={{ fontSize: 13 }}>{fmtData(i.criado_em, true)}</td>
-                <td>
-                  <div className="flex" style={{ gap: 6 }}>
-                    <form action={alterarStatusInscricao} className="flex" style={{ gap: 6 }}>
-                      <input type="hidden" name="id" value={i.id} />
-                      <select className="input" name="status" defaultValue={i.status} style={{ padding: "6px 10px", fontSize: 13, width: "auto" }}>
-                        {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                      </select>
-                      <button className="btn btn-sm" type="submit">OK</button>
-                    </form>
-                    <form action={reenviarConfirmacao}>
-                      <input type="hidden" name="id" value={i.id} />
-                      <button className="btn btn-sm btn-ghost" type="submit" title="Reenviar e-mail de confirmação">✉</button>
-                    </form>
-                  </div>
-                </td>
-                <td>
-                  <form action={salvarAcertos} className="flex" style={{ gap: 6 }}>
-                    <input type="hidden" name="id" value={i.id} />
-                    <input
-                      className="input"
-                      type="number"
-                      name="acertos"
-                      min={0}
-                      max={21}
-                      defaultValue={i.acertos}
-                      style={{ width: 60, padding: "6px 8px", fontSize: 13 }}
-                    />
-                    <button className="btn btn-sm" type="submit">OK</button>
-                  </form>
-                </td>
-                <td>
-                  {i.user_id ? (
-                    <span className="badge badge-green">Conta criada</span>
-                  ) : (
-                    <form action={criarContaCandidato}>
-                      <input type="hidden" name="id" value={i.id} />
-                      <button className="btn btn-sm btn-blue" type="submit" title="Cria login limitado para o candidato acompanhar o status">Criar conta</button>
-                    </form>
-                  )}
-                </td>
-                <td>
-                  <form action={excluirInscricao}>
-                    <input type="hidden" name="id" value={i.id} />
-                    <button className="btn btn-sm btn-danger" type="submit" title="Excluir inscrição">Excluir</button>
-                  </form>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <InscritosTable inscritos={inscritos} />
     </>
   );
 }

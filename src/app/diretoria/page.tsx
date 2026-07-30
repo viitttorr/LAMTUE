@@ -4,6 +4,7 @@ import { salvarConfiguracoes } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
 import Link from "next/link";
 import Counter from "@/components/Counter";
+import LogLigantesCandidatos from "@/components/LogLigantesCandidatos";
 
 export default async function DashboardDiretoria({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
   const s = await exigirDiretoria();
@@ -20,14 +21,12 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
   const horasPorAula = await getConfig("horas_por_aula", "2");
   const emailContato = await getConfig("email_contato", "");
   const certificadosLiberados = (await getConfig("certificados_liberados", "0")) === "1";
-  const ultimasAcoes = (await db().prepare(
-    "SELECT a.acao, a.detalhes, a.criado_em, u.nome, u.role FROM audit_log a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.id DESC LIMIT 15"
+  const ultimasAcoesDiretoria = (await db().prepare(
+    "SELECT a.acao, a.detalhes, a.criado_em, u.nome FROM audit_log a LEFT JOIN users u ON u.id = a.user_id WHERE u.role IS NULL OR u.role = 'diretoria' ORDER BY a.id DESC LIMIT 8"
+  ).all()) as { acao: string; detalhes: string | null; criado_em: string; nome: string | null }[];
+  const acoesLigantesCandidatos = (await db().prepare(
+    "SELECT a.acao, a.detalhes, a.criado_em, u.nome, u.role FROM audit_log a JOIN users u ON u.id = a.user_id WHERE u.role IN ('ligante','candidato') ORDER BY a.id DESC LIMIT 50"
   ).all()) as { acao: string; detalhes: string | null; criado_em: string; nome: string | null; role: string | null }[];
-  const ROLE_LABEL: Record<string, { label: string; cls: string }> = {
-    diretoria: { label: "Diretoria", cls: "badge-blue" },
-    ligante: { label: "Ligante", cls: "badge-green" },
-    candidato: { label: "Candidato", cls: "badge-amber" },
-  };
 
   return (
     <>
@@ -122,30 +121,27 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
         </div>
 
         <div className="card">
-          <h3 style={{ fontSize: 16 }}>Log de ações — diretoria, ligantes e candidatos</h3>
+          <h3 style={{ fontSize: 16 }}>Log de ações da diretoria</h3>
           <div className="mt-1">
-            {ultimasAcoes.length === 0 && <p className="muted" style={{ fontSize: 14 }}>Nenhuma ação registrada.</p>}
-            {ultimasAcoes.map((a, i) => {
-              const role = a.role ? ROLE_LABEL[a.role] : null;
-              return (
-                <div key={i} style={{ padding: "9px 0", borderBottom: i < ultimasAcoes.length - 1 ? "1px solid var(--border)" : "none", fontSize: 13.5 }}>
-                  <div className="flex-between">
-                    <span className="flex" style={{ gap: 6, alignItems: "center" }}>
-                      <strong>{a.nome ?? "Sistema"}</strong>
-                      {role && <span className={`badge ${role.cls}`} style={{ fontSize: 10.5 }}>{role.label}</span>}
-                      <span>· {a.acao.replace(/_/g, " ")}</span>
-                    </span>
-                    <span className="small">{fmtData(a.criado_em, true)}</span>
-                  </div>
-                  {a.detalhes && <div className="small">{a.detalhes}</div>}
+            {ultimasAcoesDiretoria.length === 0 && <p className="muted" style={{ fontSize: 14 }}>Nenhuma ação registrada.</p>}
+            {ultimasAcoesDiretoria.map((a, i) => (
+              <div key={i} style={{ padding: "9px 0", borderBottom: i < ultimasAcoesDiretoria.length - 1 ? "1px solid var(--border)" : "none", fontSize: 13.5 }}>
+                <div className="flex-between">
+                  <span><strong>{a.nome ?? "Sistema"}</strong> · {a.acao.replace(/_/g, " ")}</span>
+                  <span className="small">{fmtData(a.criado_em, true)}</span>
                 </div>
-              );
-            })}
+                {a.detalhes && <div className="small">{a.detalhes}</div>}
+              </div>
+            ))}
           </div>
           <Link href="/diretoria/relatorios" className="small mt-2" style={{ display: "inline-block", color: "var(--blue)" }}>
             Relatórios e exportações →
           </Link>
         </div>
+      </div>
+
+      <div className="mt-2">
+        <LogLigantesCandidatos acoes={acoesLigantesCandidatos} />
       </div>
     </>
   );
