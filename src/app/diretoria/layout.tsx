@@ -18,6 +18,7 @@ export default async function DiretoriaLayout({ children }: { children: React.Re
     { href: "/diretoria/casos", label: "Casos Clínicos", icon: "✚" },
     { href: "/diretoria/seletivo", label: "Seletivo", icon: "✍" },
     { href: "/diretoria/notificacoes", label: "Notificações", icon: "✉" },
+    { href: "/diretoria/tickets", label: "Tickets", icon: "🗨" },
     { href: "/diretoria/whatsapp", label: "WhatsApp", icon: "☏" },
     { href: "/diretoria/conteudo", label: "Site Público", icon: "☰" },
     { href: "/diretoria/relatorios", label: "Relatórios", icon: "▦" },

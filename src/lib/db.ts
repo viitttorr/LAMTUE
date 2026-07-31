@@ -28,6 +28,12 @@ export const STATUS_LABEL: Record<string, { label: string; badge: string }> = {
   espera: { label: "Lista de espera", badge: "badge-blue" },
 };
 
+export const TICKET_STATUS_LABEL: Record<string, { label: string; badge: string }> = {
+  aberto: { label: "Em aberto", badge: "badge-amber" },
+  em_andamento: { label: "Em andamento", badge: "badge-blue" },
+  resolvido: { label: "Resolvido", badge: "badge-green" },
+};
+
 export const DIRETORIA = [
   { nome: "Vitor Rossatto", cargo: "Presidente", email: "presidente@lamtue.com" },
   { nome: "Leonardo Pramio", cargo: "Vice-Presidente / Tesoureiro", email: "tesouraria@lamtue.com" },

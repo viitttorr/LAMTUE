@@ -5,21 +5,42 @@ import { setSessionCookie, clearSession, getSessao, BCRYPT_COST, custoDoHash } f
 import { registrarAcao } from "@/lib/audit";
 import { redirect } from "next/navigation";
 
+const MAX_TENTATIVAS = 3;
+const BLOQUEIO_MS = 30 * 60 * 1000;
+
 export async function login(formData: FormData) {
   const identificador = String(formData.get("identificador") || "").trim().toLowerCase();
   const senha = String(formData.get("senha") || "");
   if (!identificador || !senha) redirect("/login?erro=" + encodeURIComponent("Informe suas credenciais."));
 
   const user = (await db()
-    .prepare("SELECT id, senha_hash, role, ativo, must_change_password FROM users WHERE lower(email) = ? OR lower(matricula) = ?")
+    .prepare("SELECT id, senha_hash, role, ativo, must_change_password, tentativas_falhas, bloqueado_ate FROM users WHERE lower(email) = ? OR lower(matricula) = ?")
     .get(identificador, identificador)) as
-    | { id: number; senha_hash: string; role: string; ativo: number; must_change_password: number }
+    | { id: number; senha_hash: string; role: string; ativo: number; must_change_password: number; tentativas_falhas: number; bloqueado_ate: string | null }
     | undefined;
 
-  if (!user || !bcrypt.compareSync(senha, user.senha_hash))
+  if (user?.bloqueado_ate && new Date(user.bloqueado_ate) > new Date()) {
+    const minutos = Math.max(1, Math.ceil((new Date(user.bloqueado_ate).getTime() - Date.now()) / 60000));
+    redirect("/login?erro=" + encodeURIComponent(`Muitas tentativas incorretas. Tente novamente em ${minutos} minuto(s).`));
+  }
+
+  if (!user || !bcrypt.compareSync(senha, user.senha_hash)) {
+    if (user) {
+      const tentativas = user.tentativas_falhas + 1;
+      if (tentativas >= MAX_TENTATIVAS) {
+        await db().prepare("UPDATE users SET tentativas_falhas = 0, bloqueado_ate = ? WHERE id = ?")
+          .run(new Date(Date.now() + BLOQUEIO_MS).toISOString(), user.id);
+        redirect("/login?erro=" + encodeURIComponent("Muitas tentativas incorretas. Tente novamente em 30 minutos."));
+      }
+      await db().prepare("UPDATE users SET tentativas_falhas = ? WHERE id = ?").run(tentativas, user.id);
+    }
     redirect("/login?erro=" + encodeURIComponent("Credenciais inválidas. Ligantes: no primeiro acesso, use a matrícula como senha."));
+  }
   if (!user.ativo)
     redirect("/login?erro=" + encodeURIComponent("Seu acesso está desativado. Fale com a diretoria."));
+
+  if (user.tentativas_falhas > 0 || user.bloqueado_ate)
+    await db().prepare("UPDATE users SET tentativas_falhas = 0, bloqueado_ate = NULL WHERE id = ?").run(user.id);
 
   // Migração silenciosa de hashes antigos (custo mais alto) para o custo atual.
   if (custoDoHash(user.senha_hash) > BCRYPT_COST)

@@ -16,6 +16,7 @@ const ITENS = [
   { href: "/ligante/casos", label: "Casos Clínicos", icon: "✚" },
   { href: "/ligante/trilha", label: "Trilha", icon: "➤" },
   { href: "/ligante/certificado", label: "Certificado", icon: "❖" },
+  { href: "/ligante/tickets", label: "Tickets", icon: "🗨" },
 ];
 
 export default async function LiganteLayout({ children }: { children: React.ReactNode }) {

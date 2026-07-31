@@ -16,6 +16,7 @@ const ITENS = [
   { href: "/candidato/casos", label: "Casos Clínicos", icon: "✚" },
   { href: "/candidato/trilha", label: "Trilha", icon: "➤" },
   { href: "/candidato/certificado", label: "Certificado", icon: "❖" },
+  { href: "/candidato/tickets", label: "Tickets", icon: "🗨" },
 ];
 
 export default async function CandidatoLayout({ children }: { children: React.ReactNode }) {

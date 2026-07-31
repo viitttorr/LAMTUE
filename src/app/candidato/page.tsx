@@ -2,6 +2,7 @@ import { exigirCandidato } from "@/lib/auth";
 import { db, STATUS_LABEL } from "@/lib/db";
 import { fmtData } from "@/lib/util";
 import Countdown from "@/components/Countdown";
+import Link from "next/link";
 
 const MENSAGEM_STATUS: Record<string, string> = {
   pendente: "Sua inscrição foi recebida e está em análise pela diretoria.",
@@ -55,6 +56,11 @@ export default async function CandidatoPage() {
                   ⬇ Baixar gabarito oficial (PDF)
                 </a>
               )}
+              <div className="mt-2">
+                <Link href={`/candidato/tickets/novo?assunto=${encodeURIComponent("Contestação de resultado")}`} className="btn btn-sm btn-danger">
+                  Contestar resultado
+                </Link>
+              </div>
             </div>
           ) : (
             <p className="muted mt-2" style={{ fontSize: 14.5 }}>Resultados ainda não liberados.</p>
