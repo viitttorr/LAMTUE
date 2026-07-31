@@ -4,7 +4,7 @@ import { fmtData } from "@/lib/util";
 import {
   alterarStatusInscricao,
   reenviarConfirmacao,
-  salvarAcertos,
+  salvarAcertosEmMassa,
   criarContaCandidato,
   excluirInscricao,
 } from "@/app/actions/diretoria";
@@ -57,6 +57,14 @@ export default function InscritosTable({ inscritos }: { inscritos: Inscrito[] })
           )}
         </div>
       </div>
+      <p className="small muted mb-1">
+        Preencha o gabarito de quantos candidatos quiser e clique em "Atualizar gabarito de todos" para salvar tudo de uma vez.
+      </p>
+      <form id="lote-gabarito" action={salvarAcertosEmMassa} />
+      <div className="flex-between mb-1" style={{ flexWrap: "wrap", gap: 10 }}>
+        <span />
+        <button type="submit" form="lote-gabarito" className="btn btn-sm btn-blue">Atualizar gabarito de todos</button>
+      </div>
       <div className="table-wrap" style={{ opacity: carregando ? 0.5 : 1, transition: "opacity 0.15s", position: "relative" }}>
         {carregando && (
           <div className="small muted" style={{ position: "absolute", top: -22, right: 0 }}>Filtrando…</div>
@@ -93,19 +101,16 @@ export default function InscritosTable({ inscritos }: { inscritos: Inscrito[] })
                   </div>
                 </td>
                 <td>
-                  <form action={salvarAcertos} className="flex" style={{ gap: 6 }}>
-                    <input type="hidden" name="id" value={i.id} />
-                    <input
-                      className="input"
-                      type="number"
-                      name="acertos"
-                      min={0}
-                      max={21}
-                      defaultValue={i.acertos}
-                      style={{ width: 60, padding: "6px 8px", fontSize: 13 }}
-                    />
-                    <button className="btn btn-sm" type="submit">OK</button>
-                  </form>
+                  <input
+                    className="input"
+                    type="number"
+                    name={`acertos_${i.id}`}
+                    form="lote-gabarito"
+                    min={0}
+                    max={21}
+                    defaultValue={i.acertos}
+                    style={{ width: 70, padding: "6px 8px", fontSize: 13 }}
+                  />
                 </td>
                 <td>
                   {i.user_id ? (

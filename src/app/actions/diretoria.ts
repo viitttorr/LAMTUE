@@ -9,7 +9,7 @@ import { enviarEmail } from "@/lib/mailer";
 import { waIniciar, waDesconectar } from "@/lib/whatsapp";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { calcularSemestre } from "@/lib/util";
+import { calcularSemestre, brasiliaParaUTC } from "@/lib/util";
 
 /* ── Aulas ─────────────────────────────────────── */
 export async function salvarAula(formData: FormData) {
@@ -403,15 +403,27 @@ export async function excluirInscricao(formData: FormData) {
   revalidatePath("/diretoria/seletivo");
 }
 
-/** Gabarito da prova do seletivo — 21 questões. 0 = ainda não lançado. */
-export async function salvarAcertos(formData: FormData) {
+/**
+ * Gabarito da prova do seletivo — 21 questões, 0 = ainda não lançado.
+ * Um único envio para todas as linhas da tabela (inputs referenciam este
+ * form por id, via atributo `form`), em vez de um botão "OK" por candidato —
+ * evita dezenas de entradas separadas no log de auditoria.
+ */
+export async function salvarAcertosEmMassa(formData: FormData) {
   const s = await exigirDiretoria();
-  const id = Number(formData.get("id"));
-  const acertos = Math.max(0, Math.min(21, Number(formData.get("acertos")) || 0));
-  await db().prepare("UPDATE inscricoes SET acertos = ? WHERE id = ?").run(acertos, id);
-  await registrarAcao(s.id, "inscricao_acertos_lancados", `#${id} → ${acertos}/21`);
+  let atualizados = 0;
+  for (const [chave, valor] of formData.entries()) {
+    const m = chave.match(/^acertos_(\d+)$/);
+    if (!m) continue;
+    const id = Number(m[1]);
+    const acertos = Math.max(0, Math.min(21, Number(valor) || 0));
+    await db().prepare("UPDATE inscricoes SET acertos = ? WHERE id = ?").run(acertos, id);
+    atualizados++;
+  }
+  await registrarAcao(s.id, "inscricao_acertos_lote", `${atualizados} inscrição(ões) atualizada(s)`);
   revalidatePath("/diretoria/seletivo");
   revalidatePath("/candidato");
+  redirect("/diretoria/seletivo?ok=" + encodeURIComponent(`Gabarito atualizado para ${atualizados} inscrito(s).`));
 }
 
 export async function removerEditalPdf() {
@@ -420,6 +432,41 @@ export async function removerEditalPdf() {
   await registrarAcao(s.id, "edital_pdf_removido");
   revalidatePath("/diretoria/seletivo");
   revalidatePath("/seletivo");
+  revalidatePath("/candidato");
+}
+
+/**
+ * Liberação programada do gabarito para os candidatos: data/hora (Brasília,
+ * convertida para UTC ao salvar — o Worker roda em UTC) + PDF opcional do
+ * gabarito oficial, mesmo padrão de upload do edital.
+ */
+export async function salvarGabarito(formData: FormData) {
+  const s = await exigirDiretoria();
+  const liberaEm = brasiliaParaUTC(String(formData.get("gabarito_libera_em") || ""));
+
+  let gabaritoArquivoId: number | null = null;
+  try {
+    gabaritoArquivoId = await salvarArquivo(formData.get("gabarito_pdf") as File | null);
+  } catch (e) {
+    redirect("/diretoria/seletivo?erro=" + encodeURIComponent(e instanceof Error ? e.message : "Falha no upload do gabarito."));
+  }
+  if (!gabaritoArquivoId) {
+    const atual = (await db().prepare("SELECT gabarito_arquivo_id FROM seletivo WHERE id=1").get()) as { gabarito_arquivo_id: number | null } | undefined;
+    gabaritoArquivoId = atual?.gabarito_arquivo_id ?? null;
+  }
+
+  await db().prepare("UPDATE seletivo SET gabarito_libera_em=?, gabarito_arquivo_id=? WHERE id=1").run(liberaEm, gabaritoArquivoId);
+  await registrarAcao(s.id, "gabarito_configurado", liberaEm ? `libera em ${liberaEm}` : "data removida");
+  revalidatePath("/diretoria/seletivo");
+  revalidatePath("/candidato");
+  redirect("/diretoria/seletivo?ok=1");
+}
+
+export async function removerGabaritoPdf() {
+  const s = await exigirDiretoria();
+  await db().prepare("UPDATE seletivo SET gabarito_arquivo_id = NULL WHERE id = 1").run();
+  await registrarAcao(s.id, "gabarito_pdf_removido");
+  revalidatePath("/diretoria/seletivo");
   revalidatePath("/candidato");
 }
 
@@ -672,6 +719,20 @@ export async function salvarConfiguracoes(formData: FormData) {
   await registrarAcao(s.id, "configuracoes_salvas");
   revalidatePath("/diretoria");
   redirect("/diretoria?ok=1");
+}
+
+/**
+ * Modo manutenção: enquanto ativo, a diretoria continua acessando
+ * normalmente; site público, ligantes e candidatos veem um aviso no lugar
+ * do conteúdo (o menu/sidebar de cada área continua aparecendo).
+ */
+export async function salvarStatusSite(formData: FormData) {
+  const s = await exigirDiretoria();
+  const status = formData.get("status") === "manutencao" ? "manutencao" : "online";
+  await setConfig("site_status", status);
+  await registrarAcao(s.id, "site_status_alterado", status === "manutencao" ? "Manutenção ativada" : "Site voltou a ficar online");
+  revalidatePath("/diretoria");
+  redirect("/diretoria?ok=" + encodeURIComponent(status === "manutencao" ? "Modo manutenção ativado." : "Site online novamente."));
 }
 
 /* reenvio de confirmação de inscrição, caso necessário */

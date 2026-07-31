@@ -1,6 +1,7 @@
 import { exigirCandidato } from "@/lib/auth";
 import { db, STATUS_LABEL } from "@/lib/db";
 import { fmtData } from "@/lib/util";
+import Countdown from "@/components/Countdown";
 
 const MENSAGEM_STATUS: Record<string, string> = {
   pendente: "Sua inscrição foi recebida e está em análise pela diretoria.",
@@ -14,10 +15,11 @@ export default async function CandidatoPage() {
   const insc = (await db().prepare("SELECT status, criado_em, acertos FROM inscricoes WHERE user_id = ?").get(s.id)) as
     | { status: string; criado_em: string; acertos: number }
     | undefined;
-  const sel = (await db().prepare("SELECT edital_arquivo_id, cronograma FROM seletivo WHERE id = 1").get()) as
-    | { edital_arquivo_id: number | null; cronograma: string | null }
+  const sel = (await db().prepare("SELECT edital_arquivo_id, cronograma, gabarito_libera_em, gabarito_arquivo_id FROM seletivo WHERE id = 1").get()) as
+    | { edital_arquivo_id: number | null; cronograma: string | null; gabarito_libera_em: string | null; gabarito_arquivo_id: number | null }
     | undefined;
   const cronograma: { etapa: string; data: string }[] = sel?.cronograma ? JSON.parse(sel.cronograma) : [];
+  const gabaritoLiberado = !sel?.gabarito_libera_em || new Date(sel.gabarito_libera_em) <= new Date();
 
   return (
     <div style={{ maxWidth: 560, margin: "0 auto" }}>
@@ -39,10 +41,20 @@ export default async function CandidatoPage() {
       {insc && (
         <div className="card mt-2">
           <h3 style={{ fontSize: 16 }}>Gabarito da prova</h3>
-          {insc.acertos > 0 ? (
+          {!gabaritoLiberado ? (
+            <div className="mt-2">
+              <p className="small">Libera em:</p>
+              <Countdown prazo={sel!.gabarito_libera_em!} />
+            </div>
+          ) : insc.acertos > 0 ? (
             <div className="mt-2">
               <div className="stat-num" style={{ fontSize: 30, color: "var(--blue)" }}>{insc.acertos}/21</div>
               <p className="small mt-1">{Math.round((insc.acertos / 21) * 100)}% de acerto</p>
+              {sel?.gabarito_arquivo_id && (
+                <a className="btn btn-sm mt-2" href={`/api/arquivos/${sel.gabarito_arquivo_id}`} target="_blank" rel="noreferrer">
+                  ⬇ Baixar gabarito oficial (PDF)
+                </a>
+              )}
             </div>
           ) : (
             <p className="muted mt-2" style={{ fontSize: 14.5 }}>Resultados ainda não liberados.</p>

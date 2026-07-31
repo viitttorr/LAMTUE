@@ -1,14 +1,16 @@
 import { exigirDiretoria } from "@/lib/auth";
 import { db, STATUS_LABEL } from "@/lib/db";
-import { salvarSeletivo, enviarResultados, matricularAprovados, importarInscritos, removerEditalPdf } from "@/app/actions/diretoria";
+import { salvarSeletivo, enviarResultados, matricularAprovados, importarInscritos, removerEditalPdf, salvarGabarito, removerGabaritoPdf } from "@/app/actions/diretoria";
+import { utcParaBrasiliaLocal } from "@/lib/util";
 import InscritosTable from "@/components/InscritosTable";
+import Countdown from "@/components/Countdown";
 
 export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
   await exigirDiretoria();
   const { ok, erro } = await searchParams;
   const sel = (await db().prepare("SELECT * FROM seletivo WHERE id = 1").get()) as {
     ativo: number; vagas: number; prazo: string | null; taxa_centavos: number; edital: string | null; cronograma: string | null;
-    edital_arquivo_id: number | null;
+    edital_arquivo_id: number | null; gabarito_libera_em: string | null; gabarito_arquivo_id: number | null;
   };
   const inscritos = (await db().prepare("SELECT * FROM inscricoes ORDER BY nome COLLATE NOCASE ASC").all()) as {
     id: number; nome: string; matricula: string; semestre: string; email: string; telefone: string;
@@ -96,6 +98,49 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
             <button className="btn btn-sm btn-blue" type="submit">Criar contas dos aprovados ({porStatus("aprovado")})</button>
           </form>
         </div>
+      </div>
+
+      <div className="card mb-3">
+        <h3 style={{ fontSize: 16 }}>Liberação do gabarito para os candidatos</h3>
+        <p className="small mt-1">
+          Defina quando o gabarito (acertos e, se enviado, o PDF oficial) fica visível na área do candidato. Horário de Brasília.
+        </p>
+        <form action={salvarGabarito}>
+          <label className="label">Liberar em</label>
+          <input className="input" type="datetime-local" name="gabarito_libera_em" defaultValue={utcParaBrasiliaLocal(sel.gabarito_libera_em)} />
+          <label className="label mt-2">Gabarito oficial em PDF (opcional)</label>
+          {sel.gabarito_arquivo_id && (
+            <div className="flex mb-1" style={{ gap: 8, alignItems: "center" }}>
+              <a
+                className="btn btn-sm"
+                href={`/api/arquivos/${sel.gabarito_arquivo_id}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
+                📄 Gabarito atual (PDF)
+              </a>
+              <button
+                type="submit"
+                formAction={removerGabaritoPdf}
+                className="btn btn-sm btn-danger"
+                title="Remover PDF atual"
+                style={{ padding: "6px 10px" }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <input className="input" type="file" name="gabarito_pdf" accept=".pdf,application/pdf" />
+          <button className="btn btn-primary btn-sm mt-2" type="submit">Salvar</button>
+        </form>
+        {sel.gabarito_libera_em && (
+          <p className="small mt-2">
+            {new Date(sel.gabarito_libera_em) <= new Date()
+              ? <span className="badge badge-green">Já liberado para os candidatos</span>
+              : <>Libera em: <Countdown prazo={sel.gabarito_libera_em} /></>}
+          </p>
+        )}
       </div>
 
       <div className="card mb-3">

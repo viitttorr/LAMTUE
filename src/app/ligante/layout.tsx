@@ -2,6 +2,8 @@ import { exigirLigante } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import ManutencaoAviso from "@/components/ManutencaoAviso";
+import { getConfig } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +21,10 @@ const ITENS = [
 export default async function LiganteLayout({ children }: { children: React.ReactNode }) {
   const s = await exigirLigante();
   if (s.mustChange) redirect("/trocar-senha");
+  const emManutencao = (await getConfig("site_status", "online")) === "manutencao";
   return (
     <AppShell titulo="ÁREA DO LIGANTE" nome={s.nome} itens={ITENS} logoutAction={logout}>
-      {children}
+      {emManutencao ? <ManutencaoAviso /> : children}
     </AppShell>
   );
 }

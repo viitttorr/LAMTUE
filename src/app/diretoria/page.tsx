@@ -1,6 +1,6 @@
 import { exigirDiretoria } from "@/lib/auth";
 import { db, frequenciaDe, getConfig } from "@/lib/db";
-import { salvarConfiguracoes } from "@/app/actions/diretoria";
+import { salvarConfiguracoes, salvarStatusSite } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
 import Link from "next/link";
 import Counter from "@/components/Counter";
@@ -21,6 +21,10 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
   const horasPorAula = await getConfig("horas_por_aula", "2");
   const emailContato = await getConfig("email_contato", "");
   const certificadosLiberados = (await getConfig("certificados_liberados", "0")) === "1";
+  const siteStatus = await getConfig("site_status", "online");
+  const horarioServidor = new Date().toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
   const ultimasAcoesDiretoria = (await db().prepare(
     "SELECT a.acao, a.detalhes, a.criado_em, u.nome FROM audit_log a LEFT JOIN users u ON u.id = a.user_id WHERE u.role IS NULL OR u.role = 'diretoria' ORDER BY a.id DESC LIMIT 8"
   ).all()) as { acao: string; detalhes: string | null; criado_em: string; nome: string | null }[];
@@ -31,7 +35,11 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
   return (
     <>
       <h1 className="page-title">Dashboard</h1>
-      <p className="page-sub">Visão geral da liga em tempo real — {s.cargo}</p>
+      <p className="page-sub">
+        Visão geral da liga em tempo real — {s.cargo}
+        <span className="small" style={{ display: "block", marginTop: 4 }}>🕐 Horário do servidor (Brasília): {horarioServidor}</span>
+      </p>
+      {ok && <div className="alert alert-green">{ok === "1" ? "Configurações salvas." : ok}</div>}
 
       <div className="grid4">
         <Link href="/diretoria/ligantes" className="card stat hoverable">
@@ -54,20 +62,40 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
 
       <div className="grid2 mt-3" style={{ alignItems: "start" }}>
         <div>
-          <div className="card">
-            <div className="flex-between">
-              <h3 style={{ fontSize: 16 }}>Conexão WhatsApp</h3>
-              {isCloudflare ? (
-                <span className="badge badge-amber">Indisponível</span>
-              ) : (
-                <span className={`badge ${wa!.status === "conectado" ? "badge-green" : wa!.status === "aguardando_qr" ? "badge-amber" : "badge-red"}`}>
-                  <span className={`pulse-dot ${wa!.status === "conectado" ? "" : "red"}`} style={{ width: 7, height: 7 }} />
-                  {wa!.status === "conectado" ? `Conectado${wa!.numero ? ` (${wa!.numero})` : ""}` : wa!.status === "aguardando_qr" ? "Aguardando QR" : "Desconectado"}
-                </span>
-              )}
+          <div className="grid2" style={{ gap: 16 }}>
+            <div className="card">
+              <div className="flex-between">
+                <h3 style={{ fontSize: 16 }}>Conexão WhatsApp</h3>
+                {isCloudflare ? (
+                  <span className="badge badge-amber">Indisponível</span>
+                ) : (
+                  <span className={`badge ${wa!.status === "conectado" ? "badge-green" : wa!.status === "aguardando_qr" ? "badge-amber" : "badge-red"}`}>
+                    <span className={`pulse-dot ${wa!.status === "conectado" ? "" : "red"}`} style={{ width: 7, height: 7 }} />
+                    {wa!.status === "conectado" ? `Conectado${wa!.numero ? ` (${wa!.numero})` : ""}` : wa!.status === "aguardando_qr" ? "Aguardando QR" : "Desconectado"}
+                  </span>
+                )}
+              </div>
+              <p className="small mt-1">Número dedicado da liga para notificações automáticas.</p>
+              <Link href="/diretoria/whatsapp" className="btn btn-sm mt-2">Gerenciar conexão</Link>
             </div>
-            <p className="small mt-1">Número dedicado da liga para notificações automáticas.</p>
-            <Link href="/diretoria/whatsapp" className="btn btn-sm mt-2">Gerenciar conexão</Link>
+
+            <div className="card">
+              <div className="flex-between">
+                <h3 style={{ fontSize: 16 }}>Site em manutenção</h3>
+                <span className={`badge ${siteStatus === "manutencao" ? "badge-amber" : "badge-green"}`}>
+                  <span className={`pulse-dot ${siteStatus === "manutencao" ? "red" : ""}`} style={{ width: 7, height: 7 }} />
+                  {siteStatus === "manutencao" ? "Em manutenção" : "Online"}
+                </span>
+              </div>
+              <p className="small mt-1">Diretoria mantém acesso; demais usuários veem um aviso no lugar do conteúdo.</p>
+              <form action={salvarStatusSite} className="flex mt-2" style={{ gap: 8 }}>
+                <select className="input" name="status" defaultValue={siteStatus} style={{ padding: "6px 10px", fontSize: 13, width: "auto" }}>
+                  <option value="online">Online</option>
+                  <option value="manutencao">Manutenção</option>
+                </select>
+                <button className="btn btn-sm" type="submit">Aplicar</button>
+              </form>
+            </div>
           </div>
 
           {emRisco.length > 0 && (
@@ -89,7 +117,6 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
 
           <div className="card mt-2">
             <h3 style={{ fontSize: 16 }}>Configurações gerais</h3>
-            {ok && <div className="alert alert-green">Configurações salvas.</div>}
             <form action={salvarConfiguracoes}>
               <div className="grid2" style={{ gap: 12 }}>
                 <div>

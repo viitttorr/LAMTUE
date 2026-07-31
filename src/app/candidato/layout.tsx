@@ -2,6 +2,8 @@ import { exigirCandidato } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { logout } from "@/app/actions/auth";
 import AppShell from "@/components/AppShell";
+import ManutencaoAviso from "@/components/ManutencaoAviso";
+import { getConfig } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +21,10 @@ const ITENS = [
 export default async function CandidatoLayout({ children }: { children: React.ReactNode }) {
   const s = await exigirCandidato();
   if (s.mustChange) redirect("/trocar-senha");
+  const emManutencao = (await getConfig("site_status", "online")) === "manutencao";
   return (
     <AppShell titulo="PROCESSO SELETIVO" nome={s.nome} itens={ITENS} logoutAction={logout}>
-      {children}
+      {emManutencao ? <ManutencaoAviso /> : children}
     </AppShell>
   );
 }

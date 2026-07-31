@@ -1,3 +1,27 @@
+/**
+ * Brasília é UTC-3 fixo (sem horário de verão desde 2019). O Worker roda em
+ * UTC, então valores de <input type="datetime-local"> (sem timezone, hora
+ * de Brasília no fuso da diretoria) precisam desse ajuste antes de virar um
+ * ISO absoluto comparável com `new Date()` no servidor.
+ */
+export function brasiliaParaUTC(datetimeLocal: string): string | null {
+  if (!datetimeLocal) return null;
+  const [data, hora] = datetimeLocal.split("T");
+  if (!data || !hora) return null;
+  const [y, m, d] = data.split("-").map(Number);
+  const [h, min] = hora.split(":").map(Number);
+  if (!y || !m || !d || isNaN(h) || isNaN(min)) return null;
+  return new Date(Date.UTC(y, m - 1, d, h + 3, min)).toISOString();
+}
+
+/** Inverso de brasiliaParaUTC — para preencher o defaultValue do datetime-local ao editar. */
+export function utcParaBrasiliaLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return new Date(d.getTime() - 3 * 3600 * 1000).toISOString().slice(0, 16);
+}
+
 export function fmtData(iso: string | null | undefined, comHora = false): string {
   if (!iso) return "—";
   const d = new Date(iso.includes("T") || iso.includes(" ") ? iso.replace(" ", "T") : iso + "T12:00");
