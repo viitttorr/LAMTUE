@@ -2,7 +2,7 @@ import { getConfig } from "@/lib/db";
 import { enviarEmail } from "@/lib/mailer";
 import Reveal from "@/components/Reveal";
 import PageHeader from "@/components/PageHeader";
-import { redirect } from "next/navigation";
+import FormAcao from "@/components/FormAcao";
 
 export const dynamic = "force-dynamic";
 
@@ -12,15 +12,14 @@ async function enviarContato(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
   const whatsapp = String(formData.get("whatsapp") || "").trim();
   const mensagem = String(formData.get("mensagem") || "").trim();
-  if (!nome || !email || !mensagem) redirect("/contato?erro=1");
+  if (!nome || !email || !mensagem) return { erro: "Preencha todos os campos." };
   const destino = await getConfig("email_contato", "lamtue.uri@gmail.com");
   const contatoLinha = whatsapp ? `\nWhatsApp: ${whatsapp}` : "";
   await enviarEmail(destino, `Contato pelo portal — ${nome}`, `De: ${nome} <${email}>${contatoLinha}\n\n${mensagem}`, "contato");
-  redirect("/contato?ok=1");
+  return { ok: "Mensagem enviada! A diretoria retornará em breve." };
 }
 
-export default async function ContatoPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
-  const { ok, erro } = await searchParams;
+export default async function ContatoPage() {
   const emailContato = await getConfig("email_contato", "lamtue.uri@gmail.com");
   return (
     <div className="container" style={{ padding: "60px 24px 20px" }}>
@@ -41,9 +40,7 @@ export default async function ContatoPage({ searchParams }: { searchParams: Prom
           <Reveal delay={100}>
             <div className="card">
               <h3 style={{ fontSize: 18 }}>Envie uma mensagem</h3>
-              {ok && <div className="alert alert-green">Mensagem enviada! A diretoria retornará em breve.</div>}
-              {erro && <div className="alert alert-red">Preencha todos os campos.</div>}
-              <form action={enviarContato}>
+              <FormAcao action={enviarContato}>
                 <label className="label">Seu nome</label>
                 <input className="input" name="nome" required maxLength={120} />
                 <label className="label">Seu e-mail</label>
@@ -53,7 +50,7 @@ export default async function ContatoPage({ searchParams }: { searchParams: Prom
                 <label className="label">Mensagem</label>
                 <textarea className="input" name="mensagem" required maxLength={2000} rows={5} />
                 <button className="btn btn-primary mt-3" type="submit">Enviar mensagem</button>
-              </form>
+              </FormAcao>
             </div>
           </Reveal>
         </div>

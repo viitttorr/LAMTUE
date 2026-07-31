@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TICKET_STATUS_LABEL } from "@/lib/db";
 import { fmtData } from "@/lib/util";
 import { responderTicket, alterarStatusTicket } from "@/app/actions/tickets";
+import FormAcao from "@/components/FormAcao";
 
 type Mensagem = { id: number; autor_id: number; autor_nome: string; autor_role: string; mensagem: string; criado_em: string };
 type Ticket = { id: number; assunto: string; status: string; criado_em: string; requerente_nome: string };
@@ -32,13 +33,13 @@ export default function TicketThread({
           </p>
         </div>
         {souDiretoria ? (
-          <form action={alterarStatusTicket} className="flex" style={{ gap: 8 }}>
+          <FormAcao action={alterarStatusTicket} className="flex" style={{ gap: 8 }}>
             <input type="hidden" name="ticket_id" value={ticket.id} />
             <select className="input" name="status" defaultValue={ticket.status} style={{ padding: "6px 10px", fontSize: 13, width: "auto" }}>
               {Object.entries(TICKET_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
             <button className="btn btn-sm" type="submit">Salvar status</button>
-          </form>
+          </FormAcao>
         ) : (
           <span className={`badge ${st.badge}`}>{st.label}</span>
         )}
@@ -68,12 +69,12 @@ export default function TicketThread({
       </div>
 
       <div className="card mt-3" style={{ maxWidth: 640 }}>
-        <form action={responderTicket}>
+        <FormAcao action={responderTicket}>
           <input type="hidden" name="ticket_id" value={ticket.id} />
           <label className="label">Responder</label>
           <textarea className="input" name="mensagem" rows={4} required />
           <button className="btn btn-primary btn-sm mt-2" type="submit">Enviar resposta</button>
-        </form>
+        </FormAcao>
       </div>
     </>
   );

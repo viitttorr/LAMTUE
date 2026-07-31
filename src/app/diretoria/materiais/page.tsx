@@ -3,10 +3,10 @@ import { db, TEMAS } from "@/lib/db";
 import { salvarMaterial, excluirMaterial } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
 import { MATERIAIS_MAX_BYTES } from "@/lib/arquivos";
+import FormAcao from "@/components/FormAcao";
 
-export default async function MateriaisPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
+export default async function MateriaisPage() {
   await exigirDiretoria();
-  const { ok, erro } = await searchParams;
   const materiais = (await db().prepare(
     "SELECT m.*, a.titulo AS aula FROM materiais m LEFT JOIN aulas a ON a.id = m.aula_id ORDER BY m.id DESC"
   ).all()) as { id: number; titulo: string; tema: string; tipo: string; url: string | null; arquivo_id: number | null; visibilidade: string; aula: string | null; criado_em: string }[];
@@ -16,12 +16,10 @@ export default async function MateriaisPage({ searchParams }: { searchParams: Pr
     <>
       <h1 className="page-title">Biblioteca — Gestão de Materiais</h1>
       <p className="page-sub">Ao publicar, todos os ligantes são notificados automaticamente.</p>
-      {ok && <div className="alert alert-green">Material publicado e ligantes notificados.</div>}
-      {erro && <div className="alert alert-red">{erro}</div>}
 
       <div className="card mb-3">
         <h3 style={{ fontSize: 16 }}>Novo material</h3>
-        <form action={salvarMaterial}>
+        <FormAcao action={salvarMaterial}>
           <div className="grid2" style={{ gap: 12 }}>
             <div><label className="label">Título *</label><input className="input" name="titulo" required /></div>
             <div>
@@ -60,7 +58,7 @@ export default async function MateriaisPage({ searchParams }: { searchParams: Pr
             <div><label className="label">Ou arquivo (até {MATERIAIS_MAX_BYTES / 1024 / 1024} MB)</label><input className="input" type="file" name="arquivo" /></div>
           </div>
           <button className="btn btn-primary btn-sm mt-2" type="submit">Publicar material</button>
-        </form>
+        </FormAcao>
       </div>
 
       <div className="table-wrap">
@@ -79,10 +77,10 @@ export default async function MateriaisPage({ searchParams }: { searchParams: Pr
                 <td className="muted" style={{ fontSize: 13 }}>{m.aula ?? "—"}</td>
                 <td className="muted">{fmtData(m.criado_em)}</td>
                 <td>
-                  <form action={excluirMaterial}>
+                  <FormAcao action={excluirMaterial}>
                     <input type="hidden" name="id" value={m.id} />
                     <button className="btn btn-sm btn-danger" type="submit">Excluir</button>
-                  </form>
+                  </FormAcao>
                 </td>
               </tr>
             ))}

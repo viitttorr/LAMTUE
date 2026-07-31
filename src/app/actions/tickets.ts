@@ -15,7 +15,7 @@ export async function criarTicket(formData: FormData) {
   const assunto = String(formData.get("assunto") || "").trim();
   const mensagem = String(formData.get("mensagem") || "").trim();
   const area = areaDe(s.role);
-  if (!assunto || !mensagem) redirect(`${area}/tickets/novo?erro=` + encodeURIComponent("Preencha o assunto e a mensagem."));
+  if (!assunto || !mensagem) return { erro: "Preencha o assunto e a mensagem." };
 
   const r = await db().prepare("INSERT INTO tickets (user_id, assunto) VALUES (?, ?)").run(s.id, assunto);
   const ticketId = r.lastInsertRowid;
@@ -46,6 +46,7 @@ export async function responderTicket(formData: FormData) {
   revalidatePath(`${area}/tickets/${ticketId}`);
   revalidatePath("/diretoria/tickets");
   revalidatePath(`${area}/tickets`);
+  return { ok: "Resposta enviada." };
 }
 
 export async function alterarStatusTicket(formData: FormData) {
@@ -56,4 +57,5 @@ export async function alterarStatusTicket(formData: FormData) {
   await db().prepare("UPDATE tickets SET status = ?, atualizado_em = datetime('now','localtime') WHERE id = ?").run(status, ticketId);
   revalidatePath(`/diretoria/tickets/${ticketId}`);
   revalidatePath("/diretoria/tickets");
+  return { ok: "Status atualizado." };
 }

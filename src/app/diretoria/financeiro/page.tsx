@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { lancarFinanceiro, excluirLancamento } from "@/app/actions/diretoria";
 import { fmtData, fmtValor } from "@/lib/util";
 import { redirect } from "next/navigation";
+import FormAcao from "@/components/FormAcao";
 
 export default async function FinanceiroPage() {
   const s = await exigirDiretoria();
@@ -29,7 +30,7 @@ export default async function FinanceiroPage() {
 
       <div className="card mt-3 mb-3" style={{ maxWidth: 720 }}>
         <h3 style={{ fontSize: 16 }}>Novo lançamento</h3>
-        <form action={lancarFinanceiro}>
+        <FormAcao action={lancarFinanceiro}>
           <div className="grid4" style={{ gap: 12 }}>
             <div>
               <label className="label">Tipo</label>
@@ -45,7 +46,7 @@ export default async function FinanceiroPage() {
             <div><label className="label">Data</label><input className="input" type="date" name="data" defaultValue={new Date().toISOString().slice(0, 10)} /></div>
           </div>
           <button className="btn btn-primary btn-sm mt-2" type="submit">Lançar</button>
-        </form>
+        </FormAcao>
       </div>
 
       <div className="table-wrap">
@@ -62,10 +63,10 @@ export default async function FinanceiroPage() {
                   {l.tipo === "entrada" ? "+" : "−"} {fmtValor(l.valor_centavos)}
                 </td>
                 <td>
-                  <form action={excluirLancamento}>
+                  <FormAcao action={excluirLancamento}>
                     <input type="hidden" name="id" value={l.id} />
                     <button className="btn btn-sm btn-danger" type="submit">Excluir</button>
-                  </form>
+                  </FormAcao>
                 </td>
               </tr>
             ))}

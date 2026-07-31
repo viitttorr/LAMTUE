@@ -11,13 +11,11 @@ export async function gerarSimulado(formData: FormData) {
   const tema = String(formData.get("tema") || "");
   const quantidade = Math.min(20, Math.max(3, Number(formData.get("quantidade") || 5)));
   const dificuldade = String(formData.get("dificuldade") || "media");
-  if (!tema) redirect("/ligante/simulados?erro=" + encodeURIComponent("Escolha um tema."));
+  if (!tema) return { erro: "Escolha um tema." };
 
   const { questoes, origem } = await gerarQuestoes(tema, quantidade, dificuldade);
   if (questoes.length === 0)
-    redirect("/ligante/simulados?erro=" + encodeURIComponent(
-      "Não foi possível gerar questões deste tema. O banco de questões ainda não tem itens e a IA não está configurada — avise a diretoria."
-    ));
+    return { erro: "Não foi possível gerar questões deste tema. O banco de questões ainda não tem itens e a IA não está configurada — avise a diretoria." };
 
   const r = await db().prepare(
     "INSERT INTO simulados (user_id, tema, dificuldade, questoes) VALUES (?, ?, ?, ?)"

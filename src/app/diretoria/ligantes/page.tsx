@@ -4,11 +4,12 @@ import { db, frequenciaDe, getConfig } from "@/lib/db";
 import { salvarMembro, importarLigantes, alternarAtivo, redefinirSenhaMembro } from "@/app/actions/diretoria";
 import { calcularSemestre } from "@/lib/util";
 import RoleCargoFields from "@/components/RoleCargoFields";
+import FormAcao from "@/components/FormAcao";
 
-export default async function LigantesPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string; editar?: string }> }) {
+export default async function LigantesPage({ searchParams }: { searchParams: Promise<{ editar?: string }> }) {
   const s = await exigirDiretoria();
   const isPresidente = ehPresidente(s);
-  const { ok, erro, editar } = await searchParams;
+  const { editar } = await searchParams;
   const periodoAtual = await getConfig("periodo_atual", "2026/2");
   const membros = (await db().prepare(
     "SELECT id, nome, matricula, email, telefone, semestre, turma, role, cargo, ativo, must_change_password FROM users WHERE role IN ('ligante','diretoria') ORDER BY role, nome"
@@ -26,13 +27,11 @@ export default async function LigantesPage({ searchParams }: { searchParams: Pro
     <>
       <h1 className="page-title">Gestão de Ligantes e Diretoria</h1>
       <p className="page-sub">O acesso inicial de cada conta usa a matrícula como login e senha temporária.</p>
-      {ok && <div className="alert alert-green">{ok === "1" ? "Conta salva com sucesso." : ok}</div>}
-      {erro && <div className="alert alert-red">{erro}</div>}
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="card" id="form-conta">
           <h3 style={{ fontSize: 16 }}>{editando ? `Editar conta — ${editando.nome}` : "Cadastrar conta"}</h3>
-          <form action={salvarMembro} key={editando?.id ?? "novo"}>
+          <FormAcao action={salvarMembro} key={editando?.id ?? "novo"}>
             {editando && <input type="hidden" name="id" value={editando.id} />}
             <label className="label">Nome completo *</label>
             <input className="input" name="nome" required defaultValue={editando?.nome ?? ""} />
@@ -51,7 +50,7 @@ export default async function LigantesPage({ searchParams }: { searchParams: Pro
               <button className="btn btn-primary btn-sm" type="submit">{editando ? "Salvar alterações" : "Cadastrar"}</button>
               {editando && <Link href="/diretoria/ligantes" className="btn btn-sm">Cancelar edição</Link>}
             </div>
-          </form>
+          </FormAcao>
         </div>
         <div className="card">
           <h3 style={{ fontSize: 16 }}>Importar lista de ligantes (CSV)</h3>
@@ -59,11 +58,11 @@ export default async function LigantesPage({ searchParams }: { searchParams: Pro
             Colunas: <code>nome;matricula;email;telefone;turma</code> — separadas por <code>;</code> ou <code>,</code>,
             uma linha por ligante (cabeçalho opcional). Importação em massa só cria ligantes.
           </p>
-          <form action={importarLigantes}>
+          <FormAcao action={importarLigantes}>
             <label className="label">Arquivo CSV</label>
             <input className="input" type="file" name="csv" accept=".csv,text/csv" required />
             <button className="btn btn-blue btn-sm mt-2" type="submit">Importar em massa</button>
-          </form>
+          </FormAcao>
         </div>
       </div>
 
@@ -98,19 +97,19 @@ export default async function LigantesPage({ searchParams }: { searchParams: Pro
                         <Link href={`/diretoria/ligantes?editar=${m.id}#form-conta`} className="btn btn-sm">Editar</Link>
                       )}
                       {isPresidente && (
-                        <form action={redefinirSenhaMembro}>
+                        <FormAcao action={redefinirSenhaMembro}>
                           <input type="hidden" name="id" value={m.id} />
                           <button className="btn btn-sm" type="submit" title="Redefine a senha para a matrícula — o usuário troca no próximo acesso">
                             Redefinir senha
                           </button>
-                        </form>
+                        </FormAcao>
                       )}
-                      <form action={alternarAtivo}>
+                      <FormAcao action={alternarAtivo}>
                         <input type="hidden" name="id" value={m.id} />
                         <button className={`btn btn-sm ${m.ativo ? "btn-danger" : "btn-blue"}`} type="submit">
                           {m.ativo ? "Desativar" : "Ativar"}
                         </button>
-                      </form>
+                      </FormAcao>
                     </div>
                   </td>
                 </tr>

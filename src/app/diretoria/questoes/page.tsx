@@ -3,10 +3,11 @@ import { db, TEMAS } from "@/lib/db";
 import { salvarQuestao, moderarQuestao, importarQuestoes } from "@/app/actions/diretoria";
 import TemaSelect from "@/components/TemaSelect";
 import Link from "next/link";
+import FormAcao from "@/components/FormAcao";
 
-export default async function QuestoesPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string; tema?: string }> }) {
+export default async function QuestoesPage({ searchParams }: { searchParams: Promise<{ tema?: string }> }) {
   await exigirDiretoria();
-  const { ok, erro, tema: temaFiltro } = await searchParams;
+  const { tema: temaFiltro } = await searchParams;
   const pendentes = (await db().prepare("SELECT * FROM questoes WHERE aprovada = 0 ORDER BY id DESC").all()) as
     { id: number; tema: string; dificuldade: string; enunciado: string; alternativas: string; correta: number; comentario: string | null }[];
   const totais = (await db().prepare(
@@ -21,8 +22,6 @@ export default async function QuestoesPage({ searchParams }: { searchParams: Pro
     <>
       <h1 className="page-title">Banco de Questões</h1>
       <p className="page-sub">Questões manuais entram aprovadas; questões geradas por IA aguardam sua revisão.</p>
-      {ok && <div className="alert alert-green">{ok}</div>}
-      {erro && <div className="alert alert-red">{erro}</div>}
 
       <div className="card mb-3">
         <h3 style={{ fontSize: 16 }}>Importar questões em massa (CSV)</h3>
@@ -31,17 +30,17 @@ export default async function QuestoesPage({ searchParams }: { searchParams: Pro
           <code>;</code>, uma linha por questão (cabeçalho opcional). <code>correta</code> aceita A/B/C/D ou 0-3.
           Entram já aprovadas.
         </p>
-        <form action={importarQuestoes}>
+        <FormAcao action={importarQuestoes}>
           <label className="label">Arquivo CSV</label>
           <input className="input" type="file" name="csv" accept=".csv,text/csv" required />
           <button className="btn btn-blue btn-sm mt-2" type="submit">Importar em massa</button>
-        </form>
+        </FormAcao>
       </div>
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="card">
           <h3 style={{ fontSize: 16 }}>Nova questão manual</h3>
-          <form action={salvarQuestao}>
+          <FormAcao action={salvarQuestao}>
             <div className="grid2" style={{ gap: 12 }}>
               <div>
                 <label className="label">Tema *</label>
@@ -73,7 +72,7 @@ export default async function QuestoesPage({ searchParams }: { searchParams: Pro
             <label className="label">Comentário do gabarito</label>
             <textarea className="input" name="comentario" rows={2} />
             <button className="btn btn-primary btn-sm mt-2" type="submit">Adicionar ao banco</button>
-          </form>
+          </FormAcao>
         </div>
 
         <div>
@@ -121,11 +120,11 @@ export default async function QuestoesPage({ searchParams }: { searchParams: Pro
                       ))}
                     </div>
                     {q.comentario && <p className="small mt-1">{q.comentario}</p>}
-                    <form action={moderarQuestao} className="mt-2">
+                    <FormAcao action={moderarQuestao} className="mt-2">
                       <input type="hidden" name="id" value={q.id} />
                       <input type="hidden" name="acao" value="excluir" />
                       <button className="btn btn-sm btn-danger" type="submit">Excluir</button>
-                    </form>
+                    </FormAcao>
                   </div>
                 );
               })}
@@ -154,16 +153,16 @@ export default async function QuestoesPage({ searchParams }: { searchParams: Pro
                 </div>
                 {q.comentario && <p className="small mt-1">{q.comentario}</p>}
                 <div className="flex mt-2" style={{ gap: 8 }}>
-                  <form action={moderarQuestao}>
+                  <FormAcao action={moderarQuestao}>
                     <input type="hidden" name="id" value={q.id} />
                     <input type="hidden" name="acao" value="aprovar" />
                     <button className="btn btn-sm btn-blue" type="submit">Aprovar</button>
-                  </form>
-                  <form action={moderarQuestao}>
+                  </FormAcao>
+                  <FormAcao action={moderarQuestao}>
                     <input type="hidden" name="id" value={q.id} />
                     <input type="hidden" name="acao" value="excluir" />
                     <button className="btn btn-sm btn-danger" type="submit">Excluir</button>
-                  </form>
+                  </FormAcao>
                 </div>
               </div>
             );

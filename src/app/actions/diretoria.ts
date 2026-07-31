@@ -29,6 +29,7 @@ export async function salvarAula(formData: FormData) {
     await registrarAcao(s.id, "aula_criada", titulo);
   }
   revalidatePath("/diretoria/aulas");
+  return { ok: "Aula salva." };
 }
 
 export async function excluirAula(formData: FormData) {
@@ -37,6 +38,7 @@ export async function excluirAula(formData: FormData) {
   await db().prepare("DELETE FROM aulas WHERE id = ?").run(id);
   await registrarAcao(s.id, "aula_excluida", `#${id}`);
   revalidatePath("/diretoria/aulas");
+  return { ok: "Aula excluída." };
 }
 
 export async function lembrarAula(formData: FormData) {
@@ -52,6 +54,7 @@ export async function lembrarAula(formData: FormData) {
   );
   await registrarAcao(s.id, "lembrete_aula_enviado", aula.titulo);
   revalidatePath("/diretoria/notificacoes");
+  return { ok: "Lembrete enviado aos ligantes." };
 }
 
 /* ── Frequência ────────────────────────────────── */
@@ -82,7 +85,8 @@ export async function confirmarChamada(formData: FormData) {
       "presenca_registrada"
     );
   }
-  redirect(`/diretoria/frequencia?ok=1&aula=${aulaId}`);
+  revalidatePath("/diretoria/frequencia");
+  return { ok: "Chamada confirmada! Os ligantes presentes foram notificados." };
 }
 
 /* ── Ligantes ──────────────────────────────────── */
@@ -97,7 +101,7 @@ export async function salvarMembro(formData: FormData) {
   const role = String(formData.get("role") || "ligante") === "diretoria" ? "diretoria" : "ligante";
   const turma = role === "ligante" ? String(formData.get("turma") || "").trim() || null : null;
   const cargo = role === "diretoria" ? String(formData.get("cargo") || "").trim() || null : null;
-  if (!nome || !matricula) redirect("/diretoria/ligantes?erro=" + encodeURIComponent("Nome e matrícula são obrigatórios."));
+  if (!nome || !matricula) return { erro: "Nome e matrícula são obrigatórios." };
   try {
     if (id) {
       await db().prepare(
@@ -112,16 +116,16 @@ export async function salvarMembro(formData: FormData) {
       await registrarAcao(s.id, "membro_cadastrado", `${nome} (${matricula}) — ${role}`);
     }
   } catch {
-    redirect("/diretoria/ligantes?erro=" + encodeURIComponent("Matrícula ou e-mail já cadastrado."));
+    return { erro: "Matrícula ou e-mail já cadastrado." };
   }
   revalidatePath("/diretoria/ligantes");
-  redirect("/diretoria/ligantes?ok=1");
+  return { ok: "Salvo." };
 }
 
 export async function importarLigantes(formData: FormData) {
   const s = await exigirDiretoria();
   const file = formData.get("csv") as File | null;
-  if (!file || file.size === 0) redirect("/diretoria/ligantes?erro=" + encodeURIComponent("Envie um arquivo CSV."));
+  if (!file || file.size === 0) return { erro: "Envie um arquivo CSV." };
   const texto = Buffer.from(await file!.arrayBuffer()).toString("utf-8").replace(/^﻿/, "");
   const linhas = texto.split(/\r?\n/).filter((l) => l.trim());
   let importados = 0, ignorados = 0;
@@ -140,7 +144,7 @@ export async function importarLigantes(formData: FormData) {
   }
   await registrarAcao(s.id, "ligantes_importados", `${importados} importados, ${ignorados} ignorados`);
   revalidatePath("/diretoria/ligantes");
-  redirect("/diretoria/ligantes?ok=" + encodeURIComponent(`${importados} ligante(s) importado(s), ${ignorados} ignorado(s).`));
+  return { ok: `${importados} ligante(s) importado(s), ${ignorados} ignorado(s).` };
 }
 
 export async function alternarAtivo(formData: FormData) {
@@ -149,6 +153,7 @@ export async function alternarAtivo(formData: FormData) {
   await db().prepare("UPDATE users SET ativo = 1 - ativo WHERE id = ? AND role IN ('ligante','diretoria')").run(id);
   await registrarAcao(s.id, "membro_ativado_desativado", `#${id}`);
   revalidatePath("/diretoria/ligantes");
+  return { ok: "Situação da conta alterada." };
 }
 
 /** Redefine a senha de volta à matrícula (mesma convenção do 1º acesso) — restrito ao Presidente. */
@@ -157,12 +162,12 @@ export async function redefinirSenhaMembro(formData: FormData) {
   const id = Number(formData.get("id"));
   const membro = (await db().prepare("SELECT matricula FROM users WHERE id = ? AND role IN ('ligante','diretoria')").get(id)) as
     { matricula: string | null } | undefined;
-  if (!membro?.matricula) redirect("/diretoria/ligantes?erro=" + encodeURIComponent("Conta sem matrícula definida."));
+  if (!membro?.matricula) return { erro: "Conta sem matrícula definida." };
   await db().prepare("UPDATE users SET senha_hash = ?, must_change_password = 1 WHERE id = ?")
     .run(bcrypt.hashSync(membro.matricula, BCRYPT_COST), id);
   await registrarAcao(s.id, "membro_senha_redefinida", `#${id}`);
   revalidatePath("/diretoria/ligantes");
-  redirect("/diretoria/ligantes?ok=" + encodeURIComponent("Senha redefinida para a matrícula. O usuário deverá trocá-la no próximo acesso."));
+  return { ok: "Senha redefinida para a matrícula. O usuário deverá trocá-la no próximo acesso." };
 }
 
 /* ── Materiais ─────────────────────────────────── */
@@ -179,9 +184,9 @@ export async function salvarMaterial(formData: FormData) {
   try {
     arquivoId = await salvarArquivo(formData.get("arquivo") as File | null, MATERIAIS_MAX_BYTES);
   } catch (e) {
-    redirect("/diretoria/materiais?erro=" + encodeURIComponent(e instanceof Error ? e.message : "Falha no upload."));
+    return { erro: e instanceof Error ? e.message : "Falha no upload." };
   }
-  if (!url && !arquivoId) redirect("/diretoria/materiais?erro=" + encodeURIComponent("Informe um link ou envie um arquivo."));
+  if (!url && !arquivoId) return { erro: "Informe um link ou envie um arquivo." };
   await db().prepare(
     "INSERT INTO materiais (titulo, tema, tipo, url, arquivo_id, visibilidade, aula_id) VALUES (?,?,?,?,?,?,?)"
   ).run(titulo, tema, tipo, url, arquivoId, visibilidade, aulaId);
@@ -189,7 +194,7 @@ export async function salvarMaterial(formData: FormData) {
   await notificarLigantes("todos", "Novo material na biblioteca — LAMTUE",
     `Novo material disponível: "${titulo}" (tema: ${tema}). Acesse a biblioteca na área do ligante.`, "novo_material");
   revalidatePath("/diretoria/materiais");
-  redirect("/diretoria/materiais?ok=1");
+  return { ok: "Salvo." };
 }
 
 export async function excluirMaterial(formData: FormData) {
@@ -198,6 +203,7 @@ export async function excluirMaterial(formData: FormData) {
   await db().prepare("DELETE FROM materiais WHERE id = ?").run(id);
   await registrarAcao(s.id, "material_excluido", `#${id}`);
   revalidatePath("/diretoria/materiais");
+  return { ok: "Material excluído." };
 }
 
 /* ── Questões ──────────────────────────────────── */
@@ -215,6 +221,7 @@ export async function salvarQuestao(formData: FormData) {
   ).run(tema, dificuldade, enunciado, JSON.stringify(alternativas), correta, comentario);
   await registrarAcao(s.id, "questao_criada", tema);
   revalidatePath("/diretoria/questoes");
+  return { ok: "Questão adicionada ao banco." };
 }
 
 export async function moderarQuestao(formData: FormData) {
@@ -225,6 +232,7 @@ export async function moderarQuestao(formData: FormData) {
   else await db().prepare("DELETE FROM questoes WHERE id = ?").run(id);
   await registrarAcao(s.id, `questao_${acao === "aprovar" ? "aprovada" : "excluida"}`, `#${id}`);
   revalidatePath("/diretoria/questoes");
+  return { ok: "Questão atualizada." };
 }
 
 /**
@@ -235,7 +243,7 @@ export async function moderarQuestao(formData: FormData) {
 export async function importarQuestoes(formData: FormData) {
   const s = await exigirDiretoria();
   const file = formData.get("csv") as File | null;
-  if (!file || file.size === 0) redirect("/diretoria/questoes?erro=" + encodeURIComponent("Envie um arquivo CSV."));
+  if (!file || file.size === 0) return { erro: "Envie um arquivo CSV." };
   const texto = Buffer.from(await file!.arrayBuffer()).toString("utf-8").replace(/^﻿/, "");
   const linhas = texto.split(/\r?\n/).filter((l) => l.trim());
   let importadas = 0, ignoradas = 0;
@@ -257,7 +265,7 @@ export async function importarQuestoes(formData: FormData) {
   }
   await registrarAcao(s.id, "questoes_importadas", `${importadas} importadas, ${ignoradas} ignoradas`);
   revalidatePath("/diretoria/questoes");
-  redirect("/diretoria/questoes?ok=" + encodeURIComponent(`${importadas} questão(ões) importada(s), ${ignoradas} ignorada(s).`));
+  return { ok: `${importadas} questão(ões) importada(s), ${ignoradas} ignorada(s).` };
 }
 
 /* ── Casos clínicos ────────────────────────────── */
@@ -293,10 +301,10 @@ export async function salvarCaso(formData: FormData) {
   const contexto = String(formData.get("contexto") || "").trim();
   const visibilidade = String(formData.get("visibilidade") || "ligantes");
   const etapasRaw = String(formData.get("etapas") || "");
-  if (!titulo || !tema || !contexto) redirect("/diretoria/casos?erro=" + encodeURIComponent("Preencha título, tema e cenário."));
+  if (!titulo || !tema || !contexto) return { erro: "Preencha título, tema e cenário." };
   const etapas = parseEtapas(etapasRaw);
   if (!etapasValidas(etapas))
-    redirect("/diretoria/casos?erro=" + encodeURIComponent("Estrutura de etapas inválida: cada etapa precisa de uma pergunta (linha com ?) e ao menos 2 opções (linhas com * ou -), sendo 1 correta (*)."));
+    return { erro: "Estrutura de etapas inválida: cada etapa precisa de uma pergunta (linha com ?) e ao menos 2 opções (linhas com * ou -), sendo 1 correta (*)." };
   if (id) {
     await db().prepare("UPDATE casos SET titulo=?, tema=?, contexto=?, etapas=?, visibilidade=? WHERE id=?")
       .run(titulo, tema, contexto, JSON.stringify(etapas), visibilidade, id);
@@ -307,7 +315,7 @@ export async function salvarCaso(formData: FormData) {
     await registrarAcao(s.id, "caso_criado", titulo);
   }
   revalidatePath("/diretoria/casos");
-  redirect("/diretoria/casos?ok=1");
+  return { ok: "Salvo." };
 }
 
 /**
@@ -325,7 +333,7 @@ export async function salvarCaso(formData: FormData) {
 export async function importarCasos(formData: FormData) {
   const s = await exigirDiretoria();
   const file = formData.get("txt") as File | null;
-  if (!file || file.size === 0) redirect("/diretoria/casos?erro=" + encodeURIComponent("Envie um arquivo de texto."));
+  if (!file || file.size === 0) return { erro: "Envie um arquivo de texto." };
   const texto = Buffer.from(await file!.arrayBuffer()).toString("utf-8").replace(/^﻿/, "");
   const blocos = texto.split(/^===+\s*$/m).map((b) => b.trim()).filter(Boolean);
   let importados = 0, ignorados = 0;
@@ -349,7 +357,7 @@ export async function importarCasos(formData: FormData) {
   }
   await registrarAcao(s.id, "casos_importados", `${importados} importados, ${ignorados} ignorados`);
   revalidatePath("/diretoria/casos");
-  redirect("/diretoria/casos?ok=" + encodeURIComponent(`${importados} caso(s) importado(s), ${ignorados} ignorado(s).`));
+  return { ok: `${importados} caso(s) importado(s), ${ignorados} ignorado(s).` };
 }
 
 export async function excluirCaso(formData: FormData) {
@@ -358,6 +366,7 @@ export async function excluirCaso(formData: FormData) {
   await db().prepare("DELETE FROM casos WHERE id = ?").run(id);
   await registrarAcao(s.id, "caso_excluido", `#${id}`);
   revalidatePath("/diretoria/casos");
+  return { ok: "Caso excluído." };
 }
 
 /* ── Processo seletivo ─────────────────────────── */
@@ -378,7 +387,7 @@ export async function salvarSeletivo(formData: FormData) {
   try {
     editalArquivoId = await salvarArquivo(formData.get("edital_pdf") as File | null);
   } catch (e) {
-    redirect("/diretoria/seletivo?erro=" + encodeURIComponent(e instanceof Error ? e.message : "Falha no upload do edital."));
+    return { erro: e instanceof Error ? e.message : "Falha no upload do edital." };
   }
   if (!editalArquivoId) {
     const atual = (await db().prepare("SELECT edital_arquivo_id FROM seletivo WHERE id=1").get()) as { edital_arquivo_id: number | null } | undefined;
@@ -392,7 +401,7 @@ export async function salvarSeletivo(formData: FormData) {
   revalidatePath("/seletivo");
   revalidatePath("/candidato");
   revalidatePath("/");
-  redirect("/diretoria/seletivo?ok=1");
+  return { ok: "Salvo." };
 }
 
 export async function excluirInscricao(formData: FormData) {
@@ -401,6 +410,7 @@ export async function excluirInscricao(formData: FormData) {
   await db().prepare("DELETE FROM inscricoes WHERE id = ?").run(id);
   await registrarAcao(s.id, "inscricao_excluida", `#${id}`);
   revalidatePath("/diretoria/seletivo");
+  return { ok: "Inscrição excluída." };
 }
 
 /**
@@ -423,7 +433,7 @@ export async function salvarAcertosEmMassa(formData: FormData) {
   await registrarAcao(s.id, "inscricao_acertos_lote", `${atualizados} inscrição(ões) atualizada(s)`);
   revalidatePath("/diretoria/seletivo");
   revalidatePath("/candidato");
-  redirect("/diretoria/seletivo?ok=" + encodeURIComponent(`Gabarito atualizado para ${atualizados} inscrito(s).`));
+  return { ok: `Gabarito atualizado para ${atualizados} inscrito(s).` };
 }
 
 export async function removerEditalPdf() {
@@ -433,6 +443,7 @@ export async function removerEditalPdf() {
   revalidatePath("/diretoria/seletivo");
   revalidatePath("/seletivo");
   revalidatePath("/candidato");
+  return { ok: "PDF do edital removido." };
 }
 
 /**
@@ -448,7 +459,7 @@ export async function salvarGabarito(formData: FormData) {
   try {
     gabaritoArquivoId = await salvarArquivo(formData.get("gabarito_pdf") as File | null);
   } catch (e) {
-    redirect("/diretoria/seletivo?erro=" + encodeURIComponent(e instanceof Error ? e.message : "Falha no upload do gabarito."));
+    return { erro: e instanceof Error ? e.message : "Falha no upload do gabarito." };
   }
   if (!gabaritoArquivoId) {
     const atual = (await db().prepare("SELECT gabarito_arquivo_id FROM seletivo WHERE id=1").get()) as { gabarito_arquivo_id: number | null } | undefined;
@@ -459,7 +470,7 @@ export async function salvarGabarito(formData: FormData) {
   await registrarAcao(s.id, "gabarito_configurado", liberaEm ? `libera em ${liberaEm}` : "data removida");
   revalidatePath("/diretoria/seletivo");
   revalidatePath("/candidato");
-  redirect("/diretoria/seletivo?ok=1");
+  return { ok: "Salvo." };
 }
 
 export async function removerGabaritoPdf() {
@@ -468,6 +479,7 @@ export async function removerGabaritoPdf() {
   await registrarAcao(s.id, "gabarito_pdf_removido");
   revalidatePath("/diretoria/seletivo");
   revalidatePath("/candidato");
+  return { ok: "PDF do gabarito removido." };
 }
 
 /**
@@ -479,7 +491,7 @@ export async function removerGabaritoPdf() {
 export async function importarInscritos(formData: FormData) {
   const s = await exigirDiretoria();
   const file = formData.get("csv") as File | null;
-  if (!file || file.size === 0) redirect("/diretoria/seletivo?erro=" + encodeURIComponent("Envie um arquivo CSV."));
+  if (!file || file.size === 0) return { erro: "Envie um arquivo CSV." };
   const texto = Buffer.from(await file!.arrayBuffer()).toString("utf-8").replace(/^﻿/, "");
   const linhas = texto.split(/\r?\n/).filter((l) => l.trim());
   const periodoAtual = await getConfig("periodo_atual", "2026/2");
@@ -500,7 +512,7 @@ export async function importarInscritos(formData: FormData) {
   }
   await registrarAcao(s.id, "inscritos_importados", `${importados} importados, ${ignorados} ignorados`);
   revalidatePath("/diretoria/seletivo");
-  redirect("/diretoria/seletivo?ok=" + encodeURIComponent(`${importados} candidato(s) importado(s), ${ignorados} ignorado(s).`));
+  return { ok: `${importados} candidato(s) importado(s), ${ignorados} ignorado(s).` };
 }
 
 /** Cadastro manual de um único candidato, mesma convenção do import em massa (semestre calculado a partir da turma). */
@@ -512,7 +524,7 @@ export async function criarInscricaoManual(formData: FormData) {
   const telefone = String(formData.get("telefone") || "").trim();
   const turma = String(formData.get("turma") || "").trim() || null;
   if (!nome || !matricula || !email || !telefone)
-    redirect("/diretoria/seletivo?erro=" + encodeURIComponent("Preencha nome, matrícula, e-mail e telefone."));
+    return { erro: "Preencha nome, matrícula, e-mail e telefone." };
 
   const periodoAtual = await getConfig("periodo_atual", "2026/2");
   const semestre = calcularSemestre(turma, periodoAtual) ?? "—";
@@ -521,11 +533,11 @@ export async function criarInscricaoManual(formData: FormData) {
       "INSERT INTO inscricoes (nome, matricula, semestre, email, telefone, turma) VALUES (?,?,?,?,?,?)"
     ).run(nome, matricula, semestre, email, telefone, turma);
   } catch {
-    redirect("/diretoria/seletivo?erro=" + encodeURIComponent("Matrícula ou e-mail já cadastrado."));
+    return { erro: "Matrícula ou e-mail já cadastrado." };
   }
   await registrarAcao(s.id, "inscricao_manual_criada", `${nome} (${matricula})`);
   revalidatePath("/diretoria/seletivo");
-  redirect("/diretoria/seletivo?ok=" + encodeURIComponent("Candidato cadastrado manualmente."));
+  return { ok: "Candidato cadastrado manualmente." };
 }
 
 export async function alterarStatusInscricao(formData: FormData) {
@@ -536,6 +548,7 @@ export async function alterarStatusInscricao(formData: FormData) {
   await db().prepare("UPDATE inscricoes SET status = ? WHERE id = ?").run(status, id);
   await registrarAcao(s.id, "inscricao_status", `#${id} → ${status}`);
   revalidatePath("/diretoria/seletivo");
+  return { ok: "Status atualizado." };
 }
 
 /**
@@ -557,9 +570,10 @@ export async function criarContaCandidato(formData: FormData) {
     await db().prepare("UPDATE inscricoes SET user_id = ? WHERE id = ?").run(r.lastInsertRowid, id);
     await registrarAcao(s.id, "candidato_conta_criada", `#${id} ${insc.nome}`);
   } catch {
-    redirect("/diretoria/seletivo?erro=" + encodeURIComponent("Matrícula ou e-mail já cadastrado em outra conta."));
+    return { erro: "Matrícula ou e-mail já cadastrado em outra conta." };
   }
   revalidatePath("/diretoria/seletivo");
+  return { ok: "Conta do candidato criada." };
 }
 
 const TEXTOS_RESULTADO: Record<string, { assunto: string; corpo: (nome: string) => string }> = {
@@ -589,7 +603,7 @@ export async function enviarResultados(formData: FormData) {
   }
   await registrarAcao(s.id, "resultado_enviado", `${status}: ${inscritos.length} candidato(s)`);
   revalidatePath("/diretoria/seletivo");
-  redirect("/diretoria/seletivo?ok=" + encodeURIComponent(`Resultado enviado para ${inscritos.length} candidato(s) (${status}).`));
+  return { ok: `Resultado enviado para ${inscritos.length} candidato(s) (${status}).` };
 }
 
 export async function matricularAprovados() {
@@ -619,7 +633,7 @@ export async function matricularAprovados() {
   await registrarAcao(s.id, "aprovados_matriculados", `${criados} contas criadas, ${promovidos} promovidas`);
   revalidatePath("/diretoria/ligantes");
   revalidatePath("/diretoria/seletivo");
-  redirect("/diretoria/ligantes?ok=" + encodeURIComponent(`${criados} conta(s) criada(s), ${promovidos} candidato(s) promovido(s) a ligante.`));
+  return { ok: `${criados} conta(s) criada(s), ${promovidos} candidato(s) promovido(s) a ligante.` };
 }
 
 /* ── Avisos e notificações ─────────────────────── */
@@ -634,6 +648,7 @@ export async function publicarAviso(formData: FormData) {
   if (notificarTb) await notificarLigantes("todos", titulo, mensagem, "aviso_diretoria");
   revalidatePath("/diretoria/notificacoes");
   revalidatePath("/ligante/mural");
+  return { ok: "Aviso publicado no mural." };
 }
 
 export async function enviarMensagem(formData: FormData) {
@@ -653,7 +668,7 @@ export async function enviarMensagem(formData: FormData) {
   }
   await registrarAcao(s.id, "mensagem_manual_enviada", `${destino}: ${assunto}`);
   revalidatePath("/diretoria/notificacoes");
-  redirect("/diretoria/notificacoes?ok=1");
+  return { ok: "Salvo." };
 }
 
 /* ── WhatsApp ──────────────────────────────────── */
@@ -686,6 +701,7 @@ export async function lancarFinanceiro(formData: FormData) {
     .run(tipo, descricao, Math.abs(valor), data, s.id);
   await registrarAcao(s.id, "lancamento_financeiro", `${tipo}: ${descricao}`);
   revalidatePath("/diretoria/financeiro");
+  return { ok: "Lançamento registrado." };
 }
 
 export async function excluirLancamento(formData: FormData) {
@@ -695,6 +711,7 @@ export async function excluirLancamento(formData: FormData) {
   await db().prepare("DELETE FROM financeiro WHERE id = ?").run(id);
   await registrarAcao(s.id, "lancamento_excluido", `#${id}`);
   revalidatePath("/diretoria/financeiro");
+  return { ok: "Lançamento excluído." };
 }
 
 /* ── Eventos / produção / extensão (conteúdo público) ── */
@@ -709,6 +726,7 @@ export async function salvarEvento(formData: FormData) {
   await registrarAcao(s.id, "evento_criado", titulo);
   revalidatePath("/diretoria/conteudo");
   revalidatePath("/calendario");
+  return { ok: "Evento salvo." };
 }
 
 export async function salvarExtensao(formData: FormData) {
@@ -728,6 +746,7 @@ export async function salvarExtensao(formData: FormData) {
   await registrarAcao(s.id, "extensao_criada", titulo);
   revalidatePath("/diretoria/conteudo");
   revalidatePath("/extensao");
+  return { ok: "Ação de extensão salva." };
 }
 
 export async function salvarConfiguracoes(formData: FormData) {
@@ -743,7 +762,7 @@ export async function salvarConfiguracoes(formData: FormData) {
   }
   await registrarAcao(s.id, "configuracoes_salvas");
   revalidatePath("/diretoria");
-  redirect("/diretoria?ok=1");
+  return { ok: "Salvo." };
 }
 
 /**
@@ -757,7 +776,7 @@ export async function salvarStatusSite(formData: FormData) {
   await setConfig("site_status", status);
   await registrarAcao(s.id, "site_status_alterado", status === "manutencao" ? "Manutenção ativada" : "Site voltou a ficar online");
   revalidatePath("/diretoria");
-  redirect("/diretoria?ok=" + encodeURIComponent(status === "manutencao" ? "Modo manutenção ativado." : "Site online novamente."));
+  return { ok: status === "manutencao" ? "Modo manutenção ativado." : "Site online novamente." };
 }
 
 /* reenvio de confirmação de inscrição, caso necessário */
@@ -774,6 +793,7 @@ export async function reenviarConfirmacao(formData: FormData) {
     "inscricao_seletivo"
   );
   revalidatePath("/diretoria/seletivo");
+  return { ok: "E-mail de confirmação reenviado." };
 }
 
 /* ── Galeria ───────────────────────────────────── */
@@ -783,7 +803,7 @@ export async function criarAlbum(formData: FormData) {
   const descricao = String(formData.get("descricao") || "").trim() || null;
   const data = String(formData.get("data") || "") || null;
   const visibilidade = String(formData.get("visibilidade") || "publico") === "ligantes" ? "ligantes" : "publico";
-  if (!titulo) redirect("/diretoria/galeria?erro=" + encodeURIComponent("Informe o título do álbum."));
+  if (!titulo) return { erro: "Informe o título do álbum." };
   const r = await db().prepare(
     "INSERT INTO galeria_albuns (titulo, descricao, data, visibilidade) VALUES (?, ?, ?, ?)"
   ).run(titulo, descricao, data, visibilidade);
@@ -825,8 +845,8 @@ export async function adicionarFotos(formData: FormData) {
   revalidatePath(`/diretoria/galeria/${albumId}`);
   revalidatePath("/galeria");
   revalidatePath(`/galeria/${albumId}`);
-  if (falhas.length) redirect(`/diretoria/galeria/${albumId}?erro=` + encodeURIComponent(`Algumas fotos não foram salvas: ${falhas.join(", ")}`));
-  redirect(`/diretoria/galeria/${albumId}`);
+  if (falhas.length) return { erro: `Algumas fotos não foram salvas: ${falhas.join(", ")}` };
+  return { ok: `${salvas} foto(s) adicionada(s).` };
 }
 
 export async function excluirFoto(formData: FormData) {
@@ -838,4 +858,5 @@ export async function excluirFoto(formData: FormData) {
   revalidatePath(`/diretoria/galeria/${albumId}`);
   revalidatePath("/galeria");
   revalidatePath(`/galeria/${albumId}`);
+  return { ok: "Foto excluída." };
 }

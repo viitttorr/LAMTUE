@@ -3,10 +3,10 @@ import { db, TEMAS } from "@/lib/db";
 import { gerarSimulado } from "@/app/actions/ligante";
 import { fmtData } from "@/lib/util";
 import Link from "next/link";
+import FormAcao from "@/components/FormAcao";
 
-export default async function SimuladosPage({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
+export default async function SimuladosPage() {
   const s = await exigirLigante();
-  const { erro } = await searchParams;
   const historico = (await db().prepare(
     "SELECT id, tema, dificuldade, score, criado_em, finalizado_em FROM simulados WHERE user_id = ? ORDER BY id DESC LIMIT 30"
   ).all(s.id)) as { id: number; tema: string; dificuldade: string; score: number | null; criado_em: string; finalizado_em: string | null }[];
@@ -18,11 +18,10 @@ export default async function SimuladosPage({ searchParams }: { searchParams: Pr
       <p className="page-sub">
         Questões {temIA ? "geradas por inteligência artificial" : "do banco de questões da liga"} sobre os temas da LAMTUE.
       </p>
-      {erro && <div className="alert alert-red">{erro}</div>}
 
       <div className="card" style={{ borderColor: "rgba(56,189,248,0.3)" }}>
         <h3 style={{ fontSize: 17 }}>Novo simulado</h3>
-        <form action={gerarSimulado}>
+        <FormAcao action={gerarSimulado}>
           <div className="grid3" style={{ gap: 14 }}>
             <div>
               <label className="label">Tema</label>
@@ -48,7 +47,7 @@ export default async function SimuladosPage({ searchParams }: { searchParams: Pr
           </div>
           <button className="btn btn-primary mt-3" type="submit">Gerar simulado</button>
           <span className="small" style={{ marginLeft: 12 }}>A geração pode levar alguns segundos.</span>
-        </form>
+        </FormAcao>
       </div>
 
       <h3 style={{ fontSize: 17, margin: "30px 0 12px" }}>Seu histórico</h3>

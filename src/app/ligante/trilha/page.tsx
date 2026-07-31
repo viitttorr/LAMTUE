@@ -3,6 +3,7 @@ import { db, TEMAS } from "@/lib/db";
 import { temasComMaisErros } from "@/lib/ai";
 import { alternarModulo } from "@/app/actions/ligante";
 import Link from "next/link";
+import FormAcao from "@/components/FormAcao";
 
 export default async function TrilhaPage() {
   const s = await exigirLigante();
@@ -65,11 +66,11 @@ export default async function TrilhaPage() {
                 </div>
                 <div className="flex" style={{ gap: 8 }}>
                   <Link href="/ligante/biblioteca" className="btn btn-sm btn-ghost">Materiais</Link>
-                  <form action={marcar}>
+                  <FormAcao action={marcar}>
                     <button className={`btn btn-sm ${feito ? "" : "btn-blue"}`} type="submit">
                       {feito ? "Desmarcar" : "Concluir módulo"}
                     </button>
-                  </form>
+                  </FormAcao>
                 </div>
               </div>
             </div>

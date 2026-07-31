@@ -3,6 +3,7 @@ import { exigirDiretoria } from "@/lib/auth";
 import { db, TEMAS } from "@/lib/db";
 import { salvarCaso, excluirCaso, importarCasos } from "@/app/actions/diretoria";
 import TemaSelect from "@/components/TemaSelect";
+import FormAcao from "@/components/FormAcao";
 
 const EXEMPLO = `? Qual a primeira conduta na avaliação primária?
 * Garantir a permeabilidade da via aérea com controle da coluna cervical | O "A" do ABCDE sempre vem primeiro.
@@ -13,9 +14,8 @@ const EXEMPLO = `? Qual a primeira conduta na avaliação primária?
 * Aspirar a cavidade oral e considerar via aérea definitiva | Ruído sugere obstrução: desobstruir e proteger a via aérea.
 - Oferecer água ao paciente | Nunca ofereça líquidos a um paciente com rebaixamento.`;
 
-export default async function CasosAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
+export default async function CasosAdminPage() {
   await exigirDiretoria();
-  const { ok, erro } = await searchParams;
   const casos = (await db().prepare(
     `SELECT c.*, (SELECT COUNT(*) FROM casos_resultados r WHERE r.caso_id = c.id) AS execucoes FROM casos c ORDER BY c.id DESC`
   ).all()) as { id: number; titulo: string; tema: string; contexto: string; etapas: string; visibilidade: string; execucoes: number }[];
@@ -27,12 +27,10 @@ export default async function CasosAdminPage({ searchParams }: { searchParams: P
         Os casos ficam na área logada — ligantes e diretoria acessam a versão interativa com gabarito.
         No menu do site público, o lugar deles passou a ser da Galeria.
       </p>
-      {ok && <div className="alert alert-green">Caso salvo com sucesso.</div>}
-      {erro && <div className="alert alert-red">{erro}</div>}
 
       <div className="card mb-3">
         <h3 style={{ fontSize: 16 }}>Novo caso</h3>
-        <form action={salvarCaso}>
+        <FormAcao action={salvarCaso}>
           <div className="grid3" style={{ gap: 12 }}>
             <div><label className="label">Título *</label><input className="input" name="titulo" required /></div>
             <div>
@@ -56,7 +54,7 @@ export default async function CasosAdminPage({ searchParams }: { searchParams: P
             Após <code>|</code>, o feedback exibido ao ligante.
           </p>
           <button className="btn btn-primary btn-sm mt-2" type="submit">Salvar caso</button>
-        </form>
+        </FormAcao>
       </div>
 
       <div className="card mb-3">
@@ -77,11 +75,11 @@ ETAPAS:
 TITULO: Próximo caso
 ...`}
         </pre>
-        <form action={importarCasos}>
+        <FormAcao action={importarCasos}>
           <label className="label">Arquivo de texto (.txt)</label>
           <input className="input" type="file" name="txt" accept=".txt,text/plain" required />
           <button className="btn btn-blue btn-sm mt-2" type="submit">Importar em massa</button>
-        </form>
+        </FormAcao>
       </div>
 
       <div className="table-wrap">
@@ -99,10 +97,10 @@ TITULO: Próximo caso
                 <td>
                   <div className="flex" style={{ gap: 8 }}>
                     <Link className="btn btn-sm" href={`/ligante/casos/${c.id}`}>Abrir</Link>
-                    <form action={excluirCaso}>
+                    <FormAcao action={excluirCaso}>
                       <input type="hidden" name="id" value={c.id} />
                       <button className="btn btn-sm btn-danger" type="submit">Excluir</button>
-                    </form>
+                    </FormAcao>
                   </div>
                 </td>
               </tr>

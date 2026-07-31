@@ -43,27 +43,30 @@ export default async function CandidatoPage() {
         <div className="card mt-2">
           <h3 style={{ fontSize: 16 }}>Gabarito da prova</h3>
           {!gabaritoLiberado ? (
-            <div className="mt-2">
+            <div className="mt-2 gabarito-espera">
               <p className="small">Libera em:</p>
               <Countdown prazo={sel!.gabarito_libera_em!} />
             </div>
           ) : insc.acertos > 0 ? (
-            <div className="mt-2">
-              <div className="stat-num" style={{ fontSize: 30, color: "var(--blue)" }}>{insc.acertos}/21</div>
-              <p className="small mt-1">{Math.round((insc.acertos / 21) * 100)}% de acerto</p>
-              {sel?.gabarito_arquivo_id && (
-                <a className="btn btn-sm mt-2" href={`/api/arquivos/${sel.gabarito_arquivo_id}`} target="_blank" rel="noreferrer">
-                  ⬇ Baixar gabarito oficial (PDF)
-                </a>
-              )}
-              <div className="mt-2">
-                <Link href={`/candidato/tickets/novo?assunto=${encodeURIComponent("Contestação de resultado")}`} className="btn btn-sm btn-danger">
-                  Contestar resultado
-                </Link>
+            <div className="mt-2 gabarito-resultado">
+              <div className="gabarito-info">
+                <div className="stat-num" style={{ fontSize: 30, color: "var(--blue)" }}>{insc.acertos}/21</div>
+                <p className="small mt-1">{Math.round((insc.acertos / 21) * 100)}% de acerto</p>
+                {sel?.gabarito_arquivo_id && (
+                  <a className="btn btn-sm mt-2" href={`/api/arquivos/${sel.gabarito_arquivo_id}`} target="_blank" rel="noreferrer">
+                    ⬇ Baixar gabarito oficial (PDF)
+                  </a>
+                )}
               </div>
+              <Link
+                href={`/candidato/tickets/novo?assunto=${encodeURIComponent("Contestação de resultado")}`}
+                className="btn btn-danger gabarito-contestar"
+              >
+                Contestar resultado
+              </Link>
             </div>
           ) : (
-            <p className="muted mt-2" style={{ fontSize: 14.5 }}>Resultados ainda não liberados.</p>
+            <p className="muted mt-2 gabarito-vazio" style={{ fontSize: 14.5 }}>Resultados ainda não liberados.</p>
           )}
         </div>
       )}

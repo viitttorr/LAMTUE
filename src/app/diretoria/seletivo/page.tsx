@@ -4,10 +4,10 @@ import { salvarSeletivo, enviarResultados, matricularAprovados, importarInscrito
 import { utcParaBrasiliaLocal } from "@/lib/util";
 import InscritosTable from "@/components/InscritosTable";
 import Countdown from "@/components/Countdown";
+import FormAcao from "@/components/FormAcao";
 
-export default async function SeletivoAdminPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
+export default async function SeletivoAdminPage() {
   await exigirDiretoria();
-  const { ok, erro } = await searchParams;
   const sel = (await db().prepare("SELECT * FROM seletivo WHERE id = 1").get()) as {
     ativo: number; vagas: number; prazo: string | null; taxa_centavos: number; edital: string | null; cronograma: string | null;
     edital_arquivo_id: number | null; gabarito_libera_em: string | null; gabarito_arquivo_id: number | null;
@@ -26,8 +26,6 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
     <>
       <h1 className="page-title">Processo Seletivo</h1>
       <p className="page-sub">Configure o edital, acompanhe inscrições em tempo real e envie os resultados.</p>
-      {ok && <div className="alert alert-green">{ok === "1" ? "Salvo." : ok}</div>}
-      {erro && <div className="alert alert-red">{erro}</div>}
 
       <div className="grid4 mb-3">
         <div className="card stat"><div className="stat-num" style={{ color: "var(--blue)" }}>{inscritos.length}</div><div className="stat-label">Inscritos</div></div>
@@ -38,7 +36,8 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
 
       <div className="card mb-3">
         <h3 style={{ fontSize: 16 }}>Configuração do seletivo</h3>
-        <form action={salvarSeletivo}>
+        {sel.edital_arquivo_id && <FormAcao id="remover-edital" action={removerEditalPdf} />}
+        <FormAcao action={salvarSeletivo}>
           <div className="grid4" style={{ gap: 12 }}>
             <div>
               <label className="label">Situação</label>
@@ -65,9 +64,10 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
               >
                 📄 Edital atual (PDF)
               </a>
+              {/* submete o form irmão `remover-edital` (declarado fora, para não aninhar forms) */}
               <button
                 type="submit"
-                formAction={removerEditalPdf}
+                form="remover-edital"
                 className="btn btn-sm btn-danger"
                 title="Remover PDF atual"
                 style={{ padding: "6px 10px" }}
@@ -81,7 +81,7 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
           <label className="label">Cronograma — uma etapa por linha: <code>Etapa | AAAA-MM-DD</code></label>
           <textarea className="input" name="cron_etapas" rows={4} defaultValue={cronogramaTexto} placeholder={"Inscrições | 2026-08-01\nProva teórica | 2026-08-15\nResultado final | 2026-08-20"} />
           <button className="btn btn-primary btn-sm mt-2" type="submit">Salvar configuração</button>
-        </form>
+        </FormAcao>
       </div>
 
       <div className="card mb-3">
@@ -89,14 +89,14 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
         <p className="small mt-1">O envio dispara e-mail e WhatsApp para todos os candidatos do status escolhido.</p>
         <div className="flex mt-2" style={{ flexWrap: "wrap", gap: 10 }}>
           {(["aprovado", "espera", "reprovado"] as const).map((st) => (
-            <form key={st} action={enviarResultados}>
+            <FormAcao key={st} action={enviarResultados}>
               <input type="hidden" name="status" value={st} />
               <button className="btn btn-sm" type="submit">Enviar resultado: {STATUS_LABEL[st].label} ({porStatus(st)})</button>
-            </form>
+            </FormAcao>
           ))}
-          <form action={matricularAprovados}>
+          <FormAcao action={matricularAprovados}>
             <button className="btn btn-sm btn-blue" type="submit">Criar contas dos aprovados ({porStatus("aprovado")})</button>
-          </form>
+          </FormAcao>
         </div>
       </div>
 
@@ -104,7 +104,8 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
         <div className="card">
           <h3 style={{ fontSize: 15 }}>Liberação do gabarito</h3>
           <p className="small mt-1">Quando fica visível na área do candidato. Horário de Brasília.</p>
-          <form action={salvarGabarito}>
+          {sel.gabarito_arquivo_id && <FormAcao id="remover-gabarito" action={removerGabaritoPdf} />}
+          <FormAcao action={salvarGabarito}>
             <label className="label">Liberar em</label>
             <input className="input" type="datetime-local" name="gabarito_libera_em" defaultValue={utcParaBrasiliaLocal(sel.gabarito_libera_em)} style={{ fontSize: 13.5 }} />
             <label className="label mt-2">Gabarito oficial em PDF</label>
@@ -119,9 +120,10 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
                 >
                   📄 Atual
                 </a>
+                {/* submete o form irmão `remover-gabarito` (declarado fora, para não aninhar forms) */}
                 <button
                   type="submit"
-                  formAction={removerGabaritoPdf}
+                  form="remover-gabarito"
                   className="btn btn-sm btn-danger"
                   title="Remover PDF atual"
                   style={{ padding: "6px 10px" }}
@@ -132,7 +134,7 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
             )}
             <input className="input" type="file" name="gabarito_pdf" accept=".pdf,application/pdf" style={{ fontSize: 12.5 }} />
             <button className="btn btn-primary btn-sm mt-2" type="submit">Salvar</button>
-          </form>
+          </FormAcao>
           {sel.gabarito_libera_em && (
             <p className="small mt-2">
               {new Date(sel.gabarito_libera_em) <= new Date()
@@ -147,17 +149,17 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
           <p className="small mt-1">
             Colunas: <code>nome;email;matricula;telefone;turma</code>. Semestre calculado a partir da turma.
           </p>
-          <form action={importarInscritos}>
+          <FormAcao action={importarInscritos}>
             <label className="label">Arquivo CSV</label>
             <input className="input" type="file" name="csv" accept=".csv,text/csv" required style={{ fontSize: 12.5 }} />
             <button className="btn btn-blue btn-sm mt-2" type="submit">Importar em massa</button>
-          </form>
+          </FormAcao>
         </div>
 
         <div className="card">
           <h3 style={{ fontSize: 15 }}>Cadastrar candidato manualmente</h3>
           <p className="small mt-1">Um candidato de cada vez, sem CSV.</p>
-          <form action={criarInscricaoManual}>
+          <FormAcao action={criarInscricaoManual}>
             <label className="label">Nome *</label>
             <input className="input" name="nome" required style={{ fontSize: 13.5 }} />
             <label className="label">Matrícula *</label>
@@ -169,7 +171,7 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
             <label className="label">Turma</label>
             <input className="input" name="turma" placeholder="T7" style={{ fontSize: 13.5 }} />
             <button className="btn btn-blue btn-sm mt-2" type="submit">Cadastrar</button>
-          </form>
+          </FormAcao>
         </div>
       </div>
 

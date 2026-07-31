@@ -4,6 +4,7 @@ import { salvarAula, excluirAula, lembrarAula } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
 import Link from "next/link";
 import TemaSelect from "@/components/TemaSelect";
+import FormAcao from "@/components/FormAcao";
 
 export default async function AulasPage() {
   await exigirDiretoria();
@@ -20,7 +21,7 @@ export default async function AulasPage() {
 
       <div className="card mb-3">
         <h3 style={{ fontSize: 16 }}>Nova aula</h3>
-        <form action={salvarAula}>
+        <FormAcao action={salvarAula}>
           <div className="grid2" style={{ gap: 12 }}>
             <div><label className="label">Título *</label><input className="input" name="titulo" required /></div>
             <div>
@@ -35,7 +36,7 @@ export default async function AulasPage() {
           <label className="label">Descrição</label>
           <textarea className="input" name="descricao" rows={2} />
           <button className="btn btn-primary btn-sm mt-2" type="submit">Salvar aula</button>
-        </form>
+        </FormAcao>
       </div>
 
       <div className="table-wrap">
@@ -54,14 +55,14 @@ export default async function AulasPage() {
                 <td>
                   <div className="flex" style={{ gap: 6 }}>
                     <Link className="btn btn-sm" href={`/diretoria/frequencia?aula=${a.id}`}>Chamada</Link>
-                    <form action={lembrarAula}>
+                    <FormAcao action={lembrarAula}>
                       <input type="hidden" name="id" value={a.id} />
                       <button className="btn btn-sm btn-blue" type="submit" title="Envia lembrete por e-mail e WhatsApp a todos os ligantes">Lembrete</button>
-                    </form>
-                    <form action={excluirAula}>
+                    </FormAcao>
+                    <FormAcao action={excluirAula}>
                       <input type="hidden" name="id" value={a.id} />
                       <button className="btn btn-sm btn-danger" type="submit">Excluir</button>
-                    </form>
+                    </FormAcao>
                   </div>
                 </td>
               </tr>

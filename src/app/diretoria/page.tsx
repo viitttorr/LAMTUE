@@ -5,10 +5,10 @@ import { fmtData } from "@/lib/util";
 import Link from "next/link";
 import Counter from "@/components/Counter";
 import LogLigantesCandidatos from "@/components/LogLigantesCandidatos";
+import FormAcao from "@/components/FormAcao";
 
-export default async function DashboardDiretoria({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
+export default async function DashboardDiretoria() {
   const s = await exigirDiretoria();
-  const { ok } = await searchParams;
   const ligantes = (await db().prepare("SELECT id, nome FROM users WHERE role='ligante' AND ativo=1").all()) as { id: number; nome: string }[];
   const aulasRealizadas = ((await db().prepare("SELECT COUNT(*) AS n FROM aulas WHERE data <= date('now')").get()) as { n: number }).n;
   const aulasPlanejadas = ((await db().prepare("SELECT COUNT(*) AS n FROM aulas").get()) as { n: number }).n;
@@ -39,7 +39,6 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
         Visão geral da liga em tempo real — {s.cargo}
         <span className="small" style={{ display: "block", marginTop: 4 }}>🕐 Horário do servidor (Brasília): {horarioServidor}</span>
       </p>
-      {ok && <div className="alert alert-green">{ok === "1" ? "Configurações salvas." : ok}</div>}
 
       <div className="grid4">
         <Link href="/diretoria/ligantes" className="card stat hoverable">
@@ -88,13 +87,13 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
                 </span>
               </div>
               <p className="small mt-1">Diretoria mantém acesso; demais usuários veem um aviso no lugar do conteúdo.</p>
-              <form action={salvarStatusSite} className="flex mt-2" style={{ gap: 8 }}>
+              <FormAcao action={salvarStatusSite} className="flex mt-2" style={{ gap: 8 }}>
                 <select className="input" name="status" defaultValue={siteStatus} style={{ padding: "6px 10px", fontSize: 13, width: "auto" }}>
                   <option value="online">Online</option>
                   <option value="manutencao">Manutenção</option>
                 </select>
                 <button className="btn btn-sm" type="submit">Aplicar</button>
-              </form>
+              </FormAcao>
             </div>
           </div>
 
@@ -117,7 +116,7 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
 
           <div className="card mt-2">
             <h3 style={{ fontSize: 16 }}>Configurações gerais</h3>
-            <form action={salvarConfiguracoes}>
+            <FormAcao action={salvarConfiguracoes}>
               <div className="grid2" style={{ gap: 12 }}>
                 <div>
                   <label className="label">Período atual</label>
@@ -143,7 +142,7 @@ export default async function DashboardDiretoria({ searchParams }: { searchParam
               </label>
               <p className="small mt-1">Enquanto desmarcado, ligantes elegíveis veem o status mas não podem baixar o PDF.</p>
               <button className="btn btn-sm mt-2" type="submit">Salvar</button>
-            </form>
+            </FormAcao>
           </div>
         </div>
 

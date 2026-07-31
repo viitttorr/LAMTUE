@@ -2,10 +2,10 @@ import { exigirDiretoria } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { enviarMensagem, publicarAviso } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
+import FormAcao from "@/components/FormAcao";
 
-export default async function NotificacoesPage({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
+export default async function NotificacoesPage() {
   await exigirDiretoria();
-  const { ok } = await searchParams;
   const ligantes = (await db().prepare("SELECT id, nome FROM users WHERE role='ligante' AND ativo=1 ORDER BY nome").all()) as { id: number; nome: string }[];
   const historico = (await db().prepare("SELECT * FROM mensagens ORDER BY id DESC LIMIT 100").all()) as
     { id: number; canal: string; destinatario: string; assunto: string | null; corpo: string; evento: string; status: string; criado_em: string }[];
@@ -14,12 +14,11 @@ export default async function NotificacoesPage({ searchParams }: { searchParams:
     <>
       <h1 className="page-title">Central de Notificações</h1>
       <p className="page-sub">Envio manual por WhatsApp e e-mail, com histórico completo de tudo que o sistema disparou.</p>
-      {ok && <div className="alert alert-green">Mensagem enviada. Confira o status no histórico abaixo.</div>}
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="card">
           <h3 style={{ fontSize: 16 }}>Enviar mensagem</h3>
-          <form action={enviarMensagem}>
+          <FormAcao action={enviarMensagem}>
             <label className="label">Destinatários</label>
             <select className="input" name="destino" defaultValue="todos">
               <option value="todos">Todos os ligantes</option>
@@ -40,12 +39,12 @@ export default async function NotificacoesPage({ searchParams }: { searchParams:
             <label className="label">Mensagem *</label>
             <textarea className="input" name="corpo" rows={4} required />
             <button className="btn btn-primary btn-sm mt-2" type="submit">Enviar (e-mail + WhatsApp)</button>
-          </form>
+          </FormAcao>
         </div>
 
         <div className="card">
           <h3 style={{ fontSize: 16 }}>Publicar aviso no mural</h3>
-          <form action={publicarAviso}>
+          <FormAcao action={publicarAviso}>
             <label className="label">Título *</label>
             <input className="input" name="titulo" required />
             <label className="label">Mensagem *</label>
@@ -55,7 +54,7 @@ export default async function NotificacoesPage({ searchParams }: { searchParams:
               <span style={{ fontSize: 14 }}>Também notificar por e-mail e WhatsApp</span>
             </label>
             <button className="btn btn-blue btn-sm mt-2" type="submit">Publicar aviso</button>
-          </form>
+          </FormAcao>
         </div>
       </div>
 

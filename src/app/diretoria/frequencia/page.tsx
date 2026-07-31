@@ -3,10 +3,11 @@ import { db } from "@/lib/db";
 import { confirmarChamada } from "@/app/actions/diretoria";
 import { fmtData } from "@/lib/util";
 import Link from "next/link";
+import FormAcao from "@/components/FormAcao";
 
-export default async function FrequenciaPage({ searchParams }: { searchParams: Promise<{ aula?: string; ok?: string }> }) {
+export default async function FrequenciaPage({ searchParams }: { searchParams: Promise<{ aula?: string }> }) {
   await exigirDiretoria();
-  const { aula: aulaParam, ok } = await searchParams;
+  const { aula: aulaParam } = await searchParams;
   const aulas = (await db().prepare("SELECT id, titulo, data FROM aulas ORDER BY data DESC").all()) as { id: number; titulo: string; data: string }[];
   const aulaId = Number(aulaParam) || aulas[0]?.id;
   const ligantes = (await db().prepare("SELECT id, nome, matricula FROM users WHERE role='ligante' AND ativo=1 ORDER BY nome").all()) as
@@ -20,7 +21,6 @@ export default async function FrequenciaPage({ searchParams }: { searchParams: P
     <>
       <h1 className="page-title">Gestão de Frequência</h1>
       <p className="page-sub">Selecione a aula, marque as presenças e confirme. Os ligantes presentes são notificados automaticamente.</p>
-      {ok && <div className="alert alert-green">Chamada confirmada! Os ligantes presentes foram notificados por e-mail e WhatsApp.</div>}
 
       {aulas.length === 0 ? (
         <div className="card">
@@ -44,7 +44,7 @@ export default async function FrequenciaPage({ searchParams }: { searchParams: P
           {ligantes.length === 0 ? (
             <div className="card"><p className="muted">Nenhum ligante ativo cadastrado.</p></div>
           ) : (
-            <form action={confirmarChamada}>
+            <FormAcao action={confirmarChamada}>
               <input type="hidden" name="aula_id" value={aulaId} />
               <div className="table-wrap">
                 <table className="tbl">
@@ -70,7 +70,7 @@ export default async function FrequenciaPage({ searchParams }: { searchParams: P
               <button className="btn btn-primary mt-3" type="submit">
                 Confirmar chamada e notificar presentes
               </button>
-            </form>
+            </FormAcao>
           )}
         </>
       )}

@@ -1,5 +1,6 @@
 import { exigirDiretoria } from "@/lib/auth";
 import { conectarWhatsApp, desconectarWhatsApp } from "@/app/actions/diretoria";
+import FormAcao from "@/components/FormAcao";
 
 export default async function WhatsAppPage() {
   await exigirDiretoria();
@@ -45,24 +46,24 @@ export default async function WhatsAppPage() {
             <p className="small mt-2">
               No celular da liga: WhatsApp → Configurações → Aparelhos conectados → Conectar aparelho.
             </p>
-            <form action={conectarWhatsApp}>
+            <FormAcao action={conectarWhatsApp}>
               <button className="btn btn-sm mt-2" type="submit">Atualizar QR / status</button>
-            </form>
+            </FormAcao>
           </div>
         )}
 
         <div className="flex mt-3" style={{ gap: 10 }}>
           {wa.status !== "conectado" && (
-            <form action={conectarWhatsApp}>
+            <FormAcao action={conectarWhatsApp}>
               <button className="btn btn-primary" type="submit">
                 {wa.status === "aguardando_qr" ? "Atualizar status" : "Conectar (gerar QR code)"}
               </button>
-            </form>
+            </FormAcao>
           )}
           {(wa.status === "conectado" || wa.status === "aguardando_qr") && (
-            <form action={desconectarWhatsApp}>
+            <FormAcao action={desconectarWhatsApp}>
               <button className="btn btn-danger" type="submit">Desconectar e limpar sessão</button>
-            </form>
+            </FormAcao>
           )}
         </div>
 

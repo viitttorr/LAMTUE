@@ -4,10 +4,10 @@ import { exigirGaleria } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fmtData } from "@/lib/util";
 import { criarAlbum } from "@/app/actions/diretoria";
+import FormAcao from "@/components/FormAcao";
 
-export default async function GaleriaAdminPage({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
+export default async function GaleriaAdminPage() {
   await exigirGaleria();
-  const { erro } = await searchParams;
   const albuns = (await db().prepare(
     `SELECT a.id, a.titulo, a.data, a.visibilidade,
             (SELECT COUNT(*) FROM galeria_fotos f WHERE f.album_id = a.id) AS total_fotos,
@@ -19,11 +19,10 @@ export default async function GaleriaAdminPage({ searchParams }: { searchParams:
     <>
       <h1 className="page-title">Gestão de Galeria</h1>
       <p className="page-sub">Álbuns por evento — fotos publicadas aqui aparecem em /galeria para o público (ou só para ligantes, conforme a visibilidade).</p>
-      {erro && <div className="alert alert-red">{erro}</div>}
 
       <div className="card mb-3">
         <h3 style={{ fontSize: 16 }}>Novo álbum</h3>
-        <form action={criarAlbum}>
+        <FormAcao action={criarAlbum}>
           <div className="grid3" style={{ gap: 12 }}>
             <div><label className="label">Título *</label><input className="input" name="titulo" required /></div>
             <div><label className="label">Data</label><input className="input" type="date" name="data" /></div>
@@ -38,7 +37,7 @@ export default async function GaleriaAdminPage({ searchParams }: { searchParams:
           <label className="label">Descrição</label>
           <textarea className="input" name="descricao" rows={2} />
           <button className="btn btn-primary btn-sm mt-2" type="submit">Criar álbum</button>
-        </form>
+        </FormAcao>
       </div>
 
       <div className="album-grid">

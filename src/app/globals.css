@@ -322,13 +322,68 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
   .app-scrim.open { opacity: 1; pointer-events: auto; }
   .sidebar {
     position: fixed; top: 0; left: 0; bottom: 0; z-index: 95;
-    width: min(280px, 84vw); height: 100vh;
+    width: min(280px, 84vw);
+    /* 100dvh (e não 100vh) porque no celular o 100vh inclui a área escondida
+       atrás da barra do navegador — o rodapé do menu (nome/trocar senha/sair)
+       ficava cortado. O padding extra respeita a safe-area do iOS. */
+    height: 100dvh;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-102%); visibility: hidden;
     transition: transform 0.32s var(--ease-out), visibility 0.32s;
   }
   .sidebar.open { transform: none; visibility: visible; }
   .side-link { margin-bottom: 2px; padding: 10px 14px; font-size: 14px; }
   .app-main { padding: 22px 18px; }
+}
+
+/* ── Box do gabarito (área do candidato) ───────── */
+/* Desktop: resultado à esquerda, "Contestar resultado" ao lado.
+   Mobile: tudo empilhado e centralizado, com o botão maior. */
+.gabarito-espera { text-align: center; }
+.gabarito-resultado { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.gabarito-info { min-width: 0; }
+.gabarito-contestar { flex-shrink: 0; }
+@media (max-width: 640px) {
+  .gabarito-resultado { flex-direction: column; align-items: stretch; text-align: center; gap: 14px; }
+  .gabarito-vazio { text-align: center; }
+  .gabarito-contestar { width: 100%; padding: 13px 24px; font-size: 15px; }
+}
+
+/* ── Toast central (retorno das ações) ─────────── */
+.toast-wrap {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 300; pointer-events: none;
+  /* a saída é agendada em CSS para casar com DURACAO_MS do Toaster */
+  animation: toast-entra 0.22s var(--ease-out), toast-sai 0.35s ease 3.05s forwards;
+}
+.toast {
+  pointer-events: auto;
+  display: flex; align-items: center; gap: 12px;
+  max-width: min(440px, 88vw); padding: 16px 20px;
+  border-radius: 14px; border: 1px solid var(--border);
+  background: rgba(9, 13, 22, 0.97); backdrop-filter: blur(18px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  font-size: 14.5px; line-height: 1.45;
+}
+.toast-ok { border-color: rgba(52, 211, 153, 0.45); }
+.toast-erro { border-color: rgba(226, 83, 111, 0.5); }
+.toast-icone {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px;
+}
+.toast-ok .toast-icone { background: rgba(52, 211, 153, 0.16); color: var(--green); }
+.toast-erro .toast-icone { background: rgba(226, 83, 111, 0.16); color: var(--red-bright); }
+.toast-fechar {
+  flex-shrink: 0; margin-left: 4px; padding: 2px 4px;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-3); font-size: 13px; font-family: inherit;
+}
+.toast-fechar:hover { color: var(--text); }
+@keyframes toast-entra { from { opacity: 0; transform: translate(-50%, -50%) scale(0.94); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes toast-sai { to { opacity: 0; transform: translate(-50%, -58%) scale(0.97); } }
+@media (prefers-reduced-motion: reduce) {
+  .toast-wrap { animation: none; }
 }
 
 /* alerta */
