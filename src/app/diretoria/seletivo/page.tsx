@@ -1,6 +1,6 @@
 import { exigirDiretoria } from "@/lib/auth";
 import { db, STATUS_LABEL } from "@/lib/db";
-import { salvarSeletivo, enviarResultados, matricularAprovados, importarInscritos, removerEditalPdf, salvarGabarito, removerGabaritoPdf } from "@/app/actions/diretoria";
+import { salvarSeletivo, enviarResultados, matricularAprovados, importarInscritos, removerEditalPdf, salvarGabarito, removerGabaritoPdf, criarInscricaoManual } from "@/app/actions/diretoria";
 import { utcParaBrasiliaLocal } from "@/lib/util";
 import InscritosTable from "@/components/InscritosTable";
 import Countdown from "@/components/Countdown";
@@ -100,61 +100,77 @@ export default async function SeletivoAdminPage({ searchParams }: { searchParams
         </div>
       </div>
 
-      <div className="card mb-3">
-        <h3 style={{ fontSize: 16 }}>Liberação do gabarito para os candidatos</h3>
-        <p className="small mt-1">
-          Defina quando o gabarito (acertos e, se enviado, o PDF oficial) fica visível na área do candidato. Horário de Brasília.
-        </p>
-        <form action={salvarGabarito}>
-          <label className="label">Liberar em</label>
-          <input className="input" type="datetime-local" name="gabarito_libera_em" defaultValue={utcParaBrasiliaLocal(sel.gabarito_libera_em)} />
-          <label className="label mt-2">Gabarito oficial em PDF (opcional)</label>
-          {sel.gabarito_arquivo_id && (
-            <div className="flex mb-1" style={{ gap: 8, alignItems: "center" }}>
-              <a
-                className="btn btn-sm"
-                href={`/api/arquivos/${sel.gabarito_arquivo_id}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-              >
-                📄 Gabarito atual (PDF)
-              </a>
-              <button
-                type="submit"
-                formAction={removerGabaritoPdf}
-                className="btn btn-sm btn-danger"
-                title="Remover PDF atual"
-                style={{ padding: "6px 10px" }}
-              >
-                ✕
-              </button>
-            </div>
+      <div className="grid3 mb-3" style={{ alignItems: "start", gap: 16 }}>
+        <div className="card">
+          <h3 style={{ fontSize: 15 }}>Liberação do gabarito</h3>
+          <p className="small mt-1">Quando fica visível na área do candidato. Horário de Brasília.</p>
+          <form action={salvarGabarito}>
+            <label className="label">Liberar em</label>
+            <input className="input" type="datetime-local" name="gabarito_libera_em" defaultValue={utcParaBrasiliaLocal(sel.gabarito_libera_em)} style={{ fontSize: 13.5 }} />
+            <label className="label mt-2">Gabarito oficial em PDF</label>
+            {sel.gabarito_arquivo_id && (
+              <div className="flex mb-1" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <a
+                  className="btn btn-sm"
+                  href={`/api/arquivos/${sel.gabarito_arquivo_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                >
+                  📄 Atual
+                </a>
+                <button
+                  type="submit"
+                  formAction={removerGabaritoPdf}
+                  className="btn btn-sm btn-danger"
+                  title="Remover PDF atual"
+                  style={{ padding: "6px 10px" }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            <input className="input" type="file" name="gabarito_pdf" accept=".pdf,application/pdf" style={{ fontSize: 12.5 }} />
+            <button className="btn btn-primary btn-sm mt-2" type="submit">Salvar</button>
+          </form>
+          {sel.gabarito_libera_em && (
+            <p className="small mt-2">
+              {new Date(sel.gabarito_libera_em) <= new Date()
+                ? <span className="badge badge-green">Já liberado</span>
+                : <>Libera em: <Countdown prazo={sel.gabarito_libera_em} /></>}
+            </p>
           )}
-          <input className="input" type="file" name="gabarito_pdf" accept=".pdf,application/pdf" />
-          <button className="btn btn-primary btn-sm mt-2" type="submit">Salvar</button>
-        </form>
-        {sel.gabarito_libera_em && (
-          <p className="small mt-2">
-            {new Date(sel.gabarito_libera_em) <= new Date()
-              ? <span className="badge badge-green">Já liberado para os candidatos</span>
-              : <>Libera em: <Countdown prazo={sel.gabarito_libera_em} /></>}
-          </p>
-        )}
-      </div>
+        </div>
 
-      <div className="card mb-3">
-        <h3 style={{ fontSize: 16 }}>Importar candidatos (CSV)</h3>
-        <p className="small mt-1">
-          Para inscrições recebidas fora do formulário público. Colunas: <code>nome;email;matricula;telefone;turma</code> —
-          separadas por <code>;</code> ou <code>,</code>, uma linha por candidato (cabeçalho opcional). O semestre é calculado
-          automaticamente a partir da turma.
-        </p>
-        <form action={importarInscritos}>
-          <label className="label">Arquivo CSV</label>
-          <input className="input" type="file" name="csv" accept=".csv,text/csv" required />
-          <button className="btn btn-blue btn-sm mt-2" type="submit">Importar em massa</button>
-        </form>
+        <div className="card">
+          <h3 style={{ fontSize: 15 }}>Importar candidatos (CSV)</h3>
+          <p className="small mt-1">
+            Colunas: <code>nome;email;matricula;telefone;turma</code>. Semestre calculado a partir da turma.
+          </p>
+          <form action={importarInscritos}>
+            <label className="label">Arquivo CSV</label>
+            <input className="input" type="file" name="csv" accept=".csv,text/csv" required style={{ fontSize: 12.5 }} />
+            <button className="btn btn-blue btn-sm mt-2" type="submit">Importar em massa</button>
+          </form>
+        </div>
+
+        <div className="card">
+          <h3 style={{ fontSize: 15 }}>Cadastrar candidato manualmente</h3>
+          <p className="small mt-1">Um candidato de cada vez, sem CSV.</p>
+          <form action={criarInscricaoManual}>
+            <label className="label">Nome *</label>
+            <input className="input" name="nome" required style={{ fontSize: 13.5 }} />
+            <label className="label">Matrícula *</label>
+            <input className="input" name="matricula" required style={{ fontSize: 13.5 }} />
+            <label className="label">E-mail *</label>
+            <input className="input" type="email" name="email" required style={{ fontSize: 13.5 }} />
+            <label className="label">Telefone *</label>
+            <input className="input" name="telefone" required style={{ fontSize: 13.5 }} />
+            <label className="label">Turma</label>
+            <input className="input" name="turma" placeholder="T7" style={{ fontSize: 13.5 }} />
+            <button className="btn btn-blue btn-sm mt-2" type="submit">Cadastrar</button>
+          </form>
+        </div>
       </div>
 
       <InscritosTable inscritos={inscritos} />

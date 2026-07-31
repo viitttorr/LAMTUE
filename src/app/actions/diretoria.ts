@@ -503,6 +503,31 @@ export async function importarInscritos(formData: FormData) {
   redirect("/diretoria/seletivo?ok=" + encodeURIComponent(`${importados} candidato(s) importado(s), ${ignorados} ignorado(s).`));
 }
 
+/** Cadastro manual de um único candidato, mesma convenção do import em massa (semestre calculado a partir da turma). */
+export async function criarInscricaoManual(formData: FormData) {
+  const s = await exigirDiretoria();
+  const nome = String(formData.get("nome") || "").trim();
+  const matricula = String(formData.get("matricula") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const telefone = String(formData.get("telefone") || "").trim();
+  const turma = String(formData.get("turma") || "").trim() || null;
+  if (!nome || !matricula || !email || !telefone)
+    redirect("/diretoria/seletivo?erro=" + encodeURIComponent("Preencha nome, matrícula, e-mail e telefone."));
+
+  const periodoAtual = await getConfig("periodo_atual", "2026/2");
+  const semestre = calcularSemestre(turma, periodoAtual) ?? "—";
+  try {
+    await db().prepare(
+      "INSERT INTO inscricoes (nome, matricula, semestre, email, telefone, turma) VALUES (?,?,?,?,?,?)"
+    ).run(nome, matricula, semestre, email, telefone, turma);
+  } catch {
+    redirect("/diretoria/seletivo?erro=" + encodeURIComponent("Matrícula ou e-mail já cadastrado."));
+  }
+  await registrarAcao(s.id, "inscricao_manual_criada", `${nome} (${matricula})`);
+  revalidatePath("/diretoria/seletivo");
+  redirect("/diretoria/seletivo?ok=" + encodeURIComponent("Candidato cadastrado manualmente."));
+}
+
 export async function alterarStatusInscricao(formData: FormData) {
   const s = await exigirDiretoria();
   const id = Number(formData.get("id"));
