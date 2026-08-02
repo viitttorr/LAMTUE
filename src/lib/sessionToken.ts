@@ -10,7 +10,7 @@ const SECRET = process.env.SESSION_SECRET || "lamtue-dev-secret";
 export const SESSION_COOKIE = "lamtue_session";
 
 /** Sessão expira após este tempo sem atividade — renovada a cada requisição autenticada pelo middleware. */
-export const SESSION_MAX_AGE_MS = 15 * 60 * 1000;
+export const SESSION_MAX_AGE_MS = 30 * 60 * 1000;
 
 let chavePromise: Promise<CryptoKey> | null = null;
 function chave(): Promise<CryptoKey> {

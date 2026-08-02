@@ -93,6 +93,7 @@ export default async function LigantesPage({ searchParams }: { searchParams: Pro
                   <td>{m.ativo ? <span className="badge badge-green">Ativo</span> : <span className="badge badge-red">Inativo</span>}</td>
                   <td>
                     <div className="flex" style={{ gap: 6, flexWrap: "wrap" }}>
+                      <Link href={`/diretoria/logs/${m.id}`} className="btn btn-sm" title="Ver atividade desta conta">Ver LOG</Link>
                       {isPresidente && (
                         <Link href={`/diretoria/ligantes?editar=${m.id}#form-conta`} className="btn btn-sm">Editar</Link>
                       )}

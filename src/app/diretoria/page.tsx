@@ -25,12 +25,21 @@ export default async function DashboardDiretoria() {
   const horarioServidor = new Date().toLocaleString("pt-BR", {
     timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit",
   });
+  // Mantém o comportamento antigo: só ações. As páginas visitadas ficam fora
+  // daqui (senão inundariam o card) e aparecem no log individual.
   const ultimasAcoesDiretoria = (await db().prepare(
-    "SELECT a.acao, a.detalhes, a.criado_em, u.nome FROM audit_log a LEFT JOIN users u ON u.id = a.user_id WHERE u.role IS NULL OR u.role = 'diretoria' ORDER BY a.id DESC LIMIT 8"
+    `SELECT a.acao, a.detalhes, a.criado_em, u.nome FROM audit_log a
+      LEFT JOIN users u ON u.id = a.user_id
+      WHERE (u.role IS NULL OR u.role = 'diretoria') AND a.acao <> 'pagina_visitada'
+      ORDER BY a.id DESC LIMIT 8`
   ).all()) as { acao: string; detalhes: string | null; criado_em: string; nome: string | null }[];
+  // Log geral: só os acessos. O detalhe (páginas + ações) fica no log individual, em /diretoria/logs/[id].
   const acoesLigantesCandidatos = (await db().prepare(
-    "SELECT a.acao, a.detalhes, a.criado_em, u.nome, u.role FROM audit_log a JOIN users u ON u.id = a.user_id WHERE u.role IN ('ligante','candidato') ORDER BY a.id DESC LIMIT 50"
-  ).all()) as { acao: string; detalhes: string | null; criado_em: string; nome: string | null; role: string | null }[];
+    `SELECT a.acao, a.detalhes, a.criado_em, u.nome, u.role, u.id AS user_id
+       FROM audit_log a JOIN users u ON u.id = a.user_id
+      WHERE u.role IN ('ligante','candidato') AND a.acao = 'login'
+      ORDER BY a.id DESC LIMIT 50`
+  ).all()) as { acao: string; detalhes: string | null; criado_em: string; nome: string | null; role: string | null; user_id: number }[];
 
   return (
     <>

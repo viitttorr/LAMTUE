@@ -2,6 +2,7 @@ import { exigirDiretoria, podeGerenciarGaleria } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import RegistroDePagina from "@/components/RegistroDePagina";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function DiretoriaLayout({ children }: { children: React.Re
   ];
   return (
     <AppShell titulo="ÁREA DA DIRETORIA" nome={s.nome} cargo={s.cargo} itens={itens} logoutAction={logout}>
+      <RegistroDePagina />
       {children}
     </AppShell>
   );

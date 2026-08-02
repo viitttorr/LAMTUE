@@ -33,7 +33,7 @@ export async function finalizarSimulado(simuladoId: number, respostas: number[])
   const acertos = questoes.reduce((acc, q, i) => acc + (respostas[i] === q.correta ? 1 : 0), 0);
   const score = Math.round((acertos / questoes.length) * 100);
   await db().prepare(
-    "UPDATE simulados SET respostas = ?, score = ?, finalizado_em = datetime('now','localtime') WHERE id = ?"
+    "UPDATE simulados SET respostas = ?, score = ?, finalizado_em = datetime('now') WHERE id = ?"
   ).run(JSON.stringify(respostas), score, simuladoId);
   await registrarAcao(s.id, "simulado_finalizado", `${sim.tema}: ${score}%`);
   revalidatePath(`/ligante/simulados/${simuladoId}`);

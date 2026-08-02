@@ -67,7 +67,7 @@ export async function confirmarChamada(formData: FormData) {
     { id: number; nome: string; email: string | null; telefone: string | null }[];
 
   const upsert = db().prepare(
-    "INSERT INTO presencas (aula_id, user_id, presente) VALUES (?, ?, ?) ON CONFLICT(aula_id, user_id) DO UPDATE SET presente = excluded.presente, registrado_em = datetime('now','localtime')"
+    "INSERT INTO presencas (aula_id, user_id, presente) VALUES (?, ?, ?) ON CONFLICT(aula_id, user_id) DO UPDATE SET presente = excluded.presente, registrado_em = datetime('now')"
   );
   const presentes: typeof ligantes = [];
   for (const l of ligantes) {

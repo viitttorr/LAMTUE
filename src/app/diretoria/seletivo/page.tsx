@@ -100,7 +100,9 @@ export default async function SeletivoAdminPage() {
         </div>
       </div>
 
-      <div className="grid3 mb-3" style={{ alignItems: "start", gap: 16 }}>
+      {/* coluna esquerda: gabarito + import CSV empilhados; direita: cadastro manual */}
+      <div className="grid2 mb-3" style={{ alignItems: "start", gap: 16 }}>
+        <div style={{ display: "grid", gap: 16 }}>
         <div className="card">
           <h3 style={{ fontSize: 15 }}>Liberação do gabarito</h3>
           <p className="small mt-1">Quando fica visível na área do candidato. Horário de Brasília.</p>
@@ -154,6 +156,7 @@ export default async function SeletivoAdminPage() {
             <input className="input" type="file" name="csv" accept=".csv,text/csv" required style={{ fontSize: 12.5 }} />
             <button className="btn btn-blue btn-sm mt-2" type="submit">Importar em massa</button>
           </FormAcao>
+        </div>
         </div>
 
         <div className="card">

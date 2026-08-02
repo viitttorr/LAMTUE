@@ -4,6 +4,7 @@ import { logout } from "@/app/actions/auth";
 import AppShell from "@/components/AppShell";
 import ManutencaoAviso from "@/components/ManutencaoAviso";
 import { getConfig } from "@/lib/db";
+import RegistroDePagina from "@/components/RegistroDePagina";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function CandidatoLayout({ children }: { children: React.Re
   const emManutencao = (await getConfig("site_status", "online")) === "manutencao";
   return (
     <AppShell titulo="PROCESSO SELETIVO" nome={s.nome} itens={ITENS} logoutAction={logout}>
+      <RegistroDePagina />
       {emManutencao ? <ManutencaoAviso /> : children}
     </AppShell>
   );

@@ -41,7 +41,7 @@ export async function responderTicket(formData: FormData) {
 
   await db().prepare("INSERT INTO ticket_mensagens (ticket_id, autor_id, mensagem) VALUES (?, ?, ?)").run(ticketId, s.id, mensagem);
   const novoStatus = s.role === "diretoria" ? "em_andamento" : "aberto";
-  await db().prepare("UPDATE tickets SET atualizado_em = datetime('now','localtime'), status = ? WHERE id = ?").run(novoStatus, ticketId);
+  await db().prepare("UPDATE tickets SET atualizado_em = datetime('now'), status = ? WHERE id = ?").run(novoStatus, ticketId);
   await registrarAcao(s.id, "ticket_respondido", `#${ticketId}`);
   revalidatePath(`${area}/tickets/${ticketId}`);
   revalidatePath("/diretoria/tickets");
@@ -54,7 +54,7 @@ export async function alterarStatusTicket(formData: FormData) {
   const ticketId = Number(formData.get("ticket_id"));
   const status = String(formData.get("status") || "");
   if (!["aberto", "em_andamento", "resolvido"].includes(status)) return;
-  await db().prepare("UPDATE tickets SET status = ?, atualizado_em = datetime('now','localtime') WHERE id = ?").run(status, ticketId);
+  await db().prepare("UPDATE tickets SET status = ?, atualizado_em = datetime('now') WHERE id = ?").run(status, ticketId);
   revalidatePath(`/diretoria/tickets/${ticketId}`);
   revalidatePath("/diretoria/tickets");
   return { ok: "Status atualizado." };

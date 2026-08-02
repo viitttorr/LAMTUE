@@ -1,5 +1,6 @@
 "use client";
 import { useDeferredValue, useState } from "react";
+import Link from "next/link";
 import { fmtData } from "@/lib/util";
 import FormAcao from "@/components/FormAcao";
 import {
@@ -115,7 +116,10 @@ export default function InscritosTable({ inscritos }: { inscritos: Inscrito[] })
                 </td>
                 <td>
                   {i.user_id ? (
-                    <span className="badge badge-green">Conta criada</span>
+                    <div className="flex" style={{ gap: 6, flexWrap: "wrap" }}>
+                      <span className="badge badge-green">Conta criada</span>
+                      <Link href={`/diretoria/logs/${i.user_id}`} className="btn btn-sm" title="Ver atividade deste candidato">Ver LOG</Link>
+                    </div>
                   ) : (
                     <FormAcao action={criarContaCandidato}>
                       <input type="hidden" name="id" value={i.id} />
